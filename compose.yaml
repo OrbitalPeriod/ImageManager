@@ -1,0 +1,7 @@
+﻿services:
+  imagemanager:
+    image: imagemanager
+    build:
+      context: .
+      dockerfile: ImageManager/Dockerfile
+
