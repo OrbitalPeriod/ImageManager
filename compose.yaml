@@ -4,4 +4,26 @@
     build:
       context: .
       dockerfile: ImageManager/Dockerfile
+    profiles:
+      - "backend"
+    depends_on:
+      - database
+  database:
+    image: 'postgres:latest'
+    networks:
+      - network
+    env_file:
+      - path: "./.env"
+        required: true
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    profiles:
+      - "database"
 
+networks:
+  network:
+    driver: bridge
+volumes:
+  db-data:

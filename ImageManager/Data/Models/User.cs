@@ -1,0 +1,9 @@
+using Microsoft.AspNetCore.Identity;
+
+namespace ImageManager.Data.Models;
+
+public class User : IdentityUser
+{
+    public ICollection<Image> Images { get; set; } = [];
+    public ICollection<ShareToken> ShareTokens { get; set; } = [];
+}
