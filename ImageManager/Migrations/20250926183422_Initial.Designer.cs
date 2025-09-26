@@ -3,6 +3,7 @@ using System;
 using ImageManager.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250926183422_Initial")]
+    partial class Initial
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -23,38 +26,6 @@ namespace ImageManager.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("CharacterImage", b =>
-                {
-                    b.Property<int>("CharactersId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("ImageId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("CharactersId", "ImageId");
-
-                    b.HasIndex("ImageId");
-
-                    b.ToTable("CharacterImage", "identity");
-                });
-
-            modelBuilder.Entity("ImageManager.Data.Models.Character", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("characters", "identity");
-                });
-
             modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
                 {
                     b.Property<int>("Id")
@@ -63,52 +34,9 @@ namespace ImageManager.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("Rating")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("images", "identity");
-                });
-
-            modelBuilder.Entity("ImageManager.Data.Models.ShareToken", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("Created")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("Expires")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("ImageId")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ImageId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("ShareToken", "identity");
                 });
 
             modelBuilder.Entity("ImageManager.Data.Models.Tag", b =>
@@ -119,16 +47,12 @@ namespace ImageManager.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("TagName")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
 
                     b.ToTable("tags", "identity");
                 });
 
-            modelBuilder.Entity("ImageManager.Data.Models.User", b =>
+            modelBuilder.Entity("ImageManager.User", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text");
@@ -339,51 +263,6 @@ namespace ImageManager.Migrations
                     b.ToTable("AspNetUserTokens", "identity");
                 });
 
-            modelBuilder.Entity("CharacterImage", b =>
-                {
-                    b.HasOne("ImageManager.Data.Models.Character", null)
-                        .WithMany()
-                        .HasForeignKey("CharactersId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ImageManager.Data.Models.Image", null)
-                        .WithMany()
-                        .HasForeignKey("ImageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
-                {
-                    b.HasOne("ImageManager.Data.Models.User", "User")
-                        .WithMany("Images")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("ImageManager.Data.Models.ShareToken", b =>
-                {
-                    b.HasOne("ImageManager.Data.Models.Image", "Image")
-                        .WithMany("ShareTokens")
-                        .HasForeignKey("ImageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("ImageManager.Data.Models.User", "User")
-                        .WithMany("ShareTokens")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Image");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("ImageTag", b =>
                 {
                     b.HasOne("ImageManager.Data.Models.Image", null)
@@ -410,7 +289,7 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("ImageManager.Data.Models.User", null)
+                    b.HasOne("ImageManager.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -419,7 +298,7 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("ImageManager.Data.Models.User", null)
+                    b.HasOne("ImageManager.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -434,7 +313,7 @@ namespace ImageManager.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("ImageManager.Data.Models.User", null)
+                    b.HasOne("ImageManager.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -443,23 +322,11 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("ImageManager.Data.Models.User", null)
+                    b.HasOne("ImageManager.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
-                {
-                    b.Navigation("ShareTokens");
-                });
-
-            modelBuilder.Entity("ImageManager.Data.Models.User", b =>
-                {
-                    b.Navigation("Images");
-
-                    b.Navigation("ShareTokens");
                 });
 #pragma warning restore 612, 618
         }

@@ -1,68 +1,89 @@
+using DotNetEnv;
+using DotNetEnv.Configuration;
 using ImageManager;
+using ImageManager.Data;
+using ImageManager.Data.Models;
+using ImageManager.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+#region enviroment loading
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-Console.WriteLine(connectionString);
+builder.Configuration.AddDotNetEnv(options: LoadOptions.TraversePath());
+
+#endregion
+
+#region Authentication Setup
+
+// Gets the SQL Connection string from the enviroment variables
+var connectionString = builder.Configuration["SQL_CONNECTION_STRING"] ?? throw new Exception("SQL_CONNECTION_STRING is required");
+// Adds this DB to the DB context
 builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseNpgsql(connectionString));
 
+// Set up identity service
 builder.Services.AddIdentity<User, IdentityRole>(options =>
-{
-    options.Password.RequireDigit = true;
-    options.Password.RequiredLength = 8;
-    options.User.RequireUniqueEmail = true;
-})
-.AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
+    {
+        options.Password.RequireDigit = true;
+        options.Password.RequiredLength = 6;
+        options.User.RequireUniqueEmail = true;
+    }).AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
 
+// Configure cookie Authentication
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Account/Login";
-    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    options.LogoutPath = "/Account/Logout";
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
     options.SlidingExpiration = true;
+});
+
+#endregion
+
+#region API Setup
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(configure =>
+    {
+        configure.AllowAnyHeader();
+        configure.AllowAnyMethod();
+        configure.AllowAnyOrigin();
+    });
+});
+builder.Services.AddLogging();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "www", Description = "wwwww", Version = "v1" });
 });
 
 builder.Services.AddControllers();
 
+#endregion
+
 var app = builder.Build();
+
+#region Development Setup
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "UUAI API V1");
+    });
+
+    using var scope = app.Services.CreateScope();
+    DatabaseSetup.ConfigureIdentityDatabase(scope);
+}
+#endregion
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-    {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
-    })
-    .WithName("GetWeatherForecast");
-
+app.UseCors();
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
