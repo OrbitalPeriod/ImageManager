@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+message User{
+  string refresh_token = 1;
+  string pixiv_usr_id = 2;
+  bool download_private = 3;
+}
+
+message Bookmarks{
+  repeated Bookmark bookmarks = 1;
+}
+
+message Bookmark{
+  string bookmark = 1;
+}
+
+message Image{
+  repeated bytes image = 1;
+}
+
+service PixivManager{
+  rpc GetBookMarks(User) returns (Bookmarks) {}
+  rpc GetImage(Bookmark) returns (Image) {}
+}

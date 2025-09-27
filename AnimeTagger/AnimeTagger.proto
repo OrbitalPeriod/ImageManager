@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+service AnimeTagger{
+  rpc GetTags(ImageMessage) returns (ImageResponse) {}
+}
+
+message ImageMessage{
+  bytes image_data = 1;
+}
+
+message ImageResponse{
+  repeated string character_tags = 1;
+  repeated string general_tags = 2;
+  Rating rating = 3;
+}
+
+enum Rating{
+  General = 0;
+  Sensitive = 1;
+  Questionable = 2;
+  Explicit = 3;
+}
