@@ -1,13 +1,22 @@
 ﻿services:
+  AnimeTagger:
+    image: animetagger 
+    build:
+      context: ./AnimeTagger/ 
+    ports:
+      - "50051:50051"
+    env_file:
+      - path: "./.env"
   imagemanager:
     image: imagemanager
     build:
-      context: .
-      dockerfile: ImageManager/Dockerfile
+      context: ./ImageManager/
     profiles:
       - "backend"
     depends_on:
       - database
+    env_file:
+      - path: "./.env"
   database:
     image: 'postgres:latest'
     networks:

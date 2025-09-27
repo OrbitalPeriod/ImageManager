@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+service AnimeTagger{
+  rpc GetTags(ImageMessage) returns (ImageResponse) {}
+}
+
+message ImageMessage{
+  bytes image_data = 1;
+}
+
+message ImageResponse{
+  repeated string tags = 1;
+}
