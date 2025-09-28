@@ -47,6 +47,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddSingleton<IPixivService>(sp => new PixivService(builder.Configuration["PIXIV_TOKEN"] ?? throw new Exception("PIXIV_TOKEN is required")));
 builder.Services.AddSingleton<ITaggerService>(sp => new TaggerService(builder.Configuration["ANIMETAGGER_URL"] ?? throw new Exception("ANIMETAGGER_URL is required")));
+builder.Services.AddScoped<IDatabaseService, DatabaseService>();
 
 #region API Setup
 

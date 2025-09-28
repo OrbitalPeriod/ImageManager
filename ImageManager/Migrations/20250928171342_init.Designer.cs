@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250926200216_sharetokensagainagainagainagainagainagainagainagainagainagainagain")]
-    partial class sharetokensagainagainagainagainagainagainagainagainagainagainagain
+    [Migration("20250928171342_init")]
+    partial class init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -55,7 +55,29 @@ namespace ImageManager.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("characters", "identity");
+                    b.ToTable("Characters", "identity");
+                });
+
+            modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
+                {
+                    b.Property<int>("id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("id"));
+
+                    b.Property<int>("Platform")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("DownloadedImages", "identity");
                 });
 
             modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
@@ -65,6 +87,12 @@ namespace ImageManager.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Hash")
+                        .HasColumnType("numeric(20,0)");
+
+                    b.Property<int>("Publicity")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Rating")
                         .HasColumnType("integer");
@@ -77,7 +105,7 @@ namespace ImageManager.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("images", "identity");
+                    b.ToTable("Images", "identity");
                 });
 
             modelBuilder.Entity("ImageManager.Data.Models.ShareToken", b =>
@@ -111,7 +139,7 @@ namespace ImageManager.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("ShareToken", "identity");
+                    b.ToTable("ShareTokens", "identity");
                 });
 
             modelBuilder.Entity("ImageManager.Data.Models.Tag", b =>
@@ -128,7 +156,7 @@ namespace ImageManager.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("tags", "identity");
+                    b.ToTable("Tags", "identity");
                 });
 
             modelBuilder.Entity("ImageManager.Data.Models.User", b =>
@@ -142,6 +170,9 @@ namespace ImageManager.Migrations
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
+
+                    b.Property<int>("DefaultPublicity")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Email")
                         .HasMaxLength(256)
@@ -357,6 +388,17 @@ namespace ImageManager.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
+                {
+                    b.HasOne("ImageManager.Data.Models.User", "User")
+                        .WithMany("DownloadedImages")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
                 {
                     b.HasOne("ImageManager.Data.Models.User", "User")
@@ -460,6 +502,8 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.User", b =>
                 {
+                    b.Navigation("DownloadedImages");
+
                     b.Navigation("Images");
 
                     b.Navigation("ShareTokens");
