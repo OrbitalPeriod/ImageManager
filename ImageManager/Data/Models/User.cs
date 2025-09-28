@@ -6,4 +6,6 @@ public class User : IdentityUser
 {
     public ICollection<Image> Images { get; set; } = [];
     public ICollection<ShareToken> ShareTokens { get; set; } = [];
+    public ICollection<DownloadedImage> DownloadedImages { get; set; } = [];
+    public Publicity DefaultPublicity { get; set; } = Publicity.Open;
 }

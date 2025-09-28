@@ -10,6 +10,7 @@ namespace ImageManager.Controllers;
 public class ErrorController : Controller
 {
     [Route("/error")]
+    [HttpGet, HttpPost]
     public IActionResult HandleError([FromServices] IHostEnvironment env)
     {
         var exception = HttpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
