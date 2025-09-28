@@ -2,11 +2,13 @@ using DotNetEnv;
 using DotNetEnv.Configuration;
 using ImageManager;
 using ImageManager.Data;
-using ImageManager.Data.Models;
 using ImageManager.Extensions;
+using ImageManager.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using PixivCS.Api;
+using User = ImageManager.Data.Models.User;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +44,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 #endregion
+
+builder.Services.AddSingleton<IPixivService>(sp => new PixivService(builder.Configuration["PIXIV_TOKEN"] ?? throw new Exception("PIXIV_TOKEN is required")));
+builder.Services.AddSingleton<ITaggerService>(sp => new TaggerService(builder.Configuration["ANIMETAGGER_URL"] ?? throw new Exception("ANIMETAGGER_URL is required")));
 
 #region API Setup
 
@@ -84,6 +89,7 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.UseExceptionHandler("/error");
 
 app.UseCors();
 app.Run();

@@ -7,10 +7,10 @@ namespace ImageManager.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<User, IdentityRole, string>(options)
 {
-    public DbSet<Character>  characters { get; set; }
+    public DbSet<Character> characters { get; set; }
     public DbSet<Image> images { get; set; }
     public DbSet<Tag> tags { get; set; }
-    
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
