@@ -7,6 +7,8 @@
       - "50051:50051"
     env_file:
       - path: "./.env"
+    profiles:
+      - "tagger"
   imagemanager:
     image: imagemanager
     build:
@@ -15,6 +17,7 @@
       - "backend"
     depends_on:
       - database
+      - AnimeTagger
     env_file:
       - path: "./.env"
   database:

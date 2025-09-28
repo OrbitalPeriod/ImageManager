@@ -38,7 +38,7 @@ public class TestAuthController : Controller
     {
         return Ok(User.Identity?.IsAuthenticated == true ? User.Identity.Name : "Not logged in");
     }
-    
+
     [Authorize]
     [HttpGet("secret")]
     public IActionResult Secret()

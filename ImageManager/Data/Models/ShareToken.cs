@@ -7,8 +7,8 @@ public class ShareToken
     public string UserId { get; set; }
     public Image Image { get; set; }
     public int ImageId { get; set; }
-    
-    
+
+
     public DateTime Created { get; set; }
     public DateTime Expires { get; set; }
     public string Token { get; set; }
