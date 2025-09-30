@@ -6,16 +6,10 @@ using Microsoft.AspNetCore.Identity;
 namespace ImageManager;
 
 [Route("test-auth")]
-public class TestAuthController : Controller
+public class TestAuthController(UserManager<User> userManager, SignInManager<User> signInManager) : Controller
 {
-    private readonly UserManager<User> _userManager;
-    private readonly SignInManager<User> _signInManager;
-
-    public TestAuthController(UserManager<User> userManager, SignInManager<User> signInManager)
-    {
-        _userManager = userManager;
-        _signInManager = signInManager;
-    }
+    private readonly UserManager<User> _userManager = userManager;
+    private readonly SignInManager<User> _signInManager = signInManager;
 
     [HttpGet("register")]
     public async Task<IActionResult> Register()

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250928171342_init")]
-    partial class init
+    [Migration("20250930213831_test")]
+    partial class test
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -31,8 +31,8 @@ namespace ImageManager.Migrations
                     b.Property<int>("CharactersId")
                         .HasColumnType("integer");
 
-                    b.Property<int>("ImageId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ImageId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("CharactersId", "ImageId");
 
@@ -60,11 +60,17 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
                 {
-                    b.Property<int>("id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("id"));
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DownloadedId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ImageId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Platform")
                         .HasColumnType("integer");
@@ -73,7 +79,10 @@ namespace ImageManager.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.HasKey("id");
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImageId")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -82,11 +91,9 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("Hash")
                         .HasColumnType("numeric(20,0)");
@@ -122,8 +129,8 @@ namespace ImageManager.Migrations
                     b.Property<DateTime>("Expires")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("ImageId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ImageId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Token")
                         .IsRequired()
@@ -150,7 +157,7 @@ namespace ImageManager.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("TagName")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -204,6 +211,10 @@ namespace ImageManager.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
+                    b.PrimitiveCollection<int[]>("Platforms")
+                        .IsRequired()
+                        .HasColumnType("integer[]");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
@@ -228,8 +239,8 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageTag", b =>
                 {
-                    b.Property<int>("ImageId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("ImageId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("TagsId")
                         .HasColumnType("integer");
@@ -390,11 +401,17 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
                 {
+                    b.HasOne("ImageManager.Data.Models.Image", "Image")
+                        .WithOne("DownloadedImage")
+                        .HasForeignKey("ImageManager.Data.Models.DownloadedImage", "ImageId");
+
                     b.HasOne("ImageManager.Data.Models.User", "User")
                         .WithMany("DownloadedImages")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Image");
 
                     b.Navigation("User");
                 });
@@ -497,6 +514,8 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
                 {
+                    b.Navigation("DownloadedImage");
+
                     b.Navigation("ShareTokens");
                 });
 

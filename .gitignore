@@ -218,6 +218,7 @@ Backup*/
 UpgradeLog*.XML
 UpgradeLog*.htm
 
+*.png
 # SQL Server files
 *.mdf
 *.ldf

@@ -10,13 +10,11 @@ using Microsoft.OpenApi.Models;
 using PixivCS.Api;
 using User = ImageManager.Data.Models.User;
 
+DotNetEnv.Env.TraversePath().Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
-#region enviroment loading
 
-builder.Configuration.AddDotNetEnv(options: LoadOptions.TraversePath());
-
-#endregion
 
 #region Authentication Setup
 
@@ -47,7 +45,10 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 builder.Services.AddSingleton<IPixivService>(sp => new PixivService(builder.Configuration["PIXIV_TOKEN"] ?? throw new Exception("PIXIV_TOKEN is required")));
 builder.Services.AddSingleton<ITaggerService>(sp => new TaggerService(builder.Configuration["ANIMETAGGER_URL"] ?? throw new Exception("ANIMETAGGER_URL is required")));
+builder.Services.AddSingleton<IFileService>(sp =>
+    new FileService(builder.Configuration["FILE_DIRECTORY"] ?? throw new Exception("FILE_DIRECTORY is required")));
 builder.Services.AddScoped<IDatabaseService, DatabaseService>();
+builder.Services.AddScoped<IImageImportManager, ImageImportManager>();
 
 #region API Setup
 

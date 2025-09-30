@@ -39,6 +39,7 @@
 
     <ItemGroup>
       <Folder Include="Data\ModelConfiguration\" />
+      <Folder Include="images\" />
     </ItemGroup>
     <ItemGroup>
         <Protobuf Include="Protos\AnimeTagger.proto" GrpcServices="Client" />
