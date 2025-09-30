@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class test : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -37,6 +37,7 @@ namespace ImageManager.Migrations
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
                     DefaultPublicity = table.Column<int>(type: "integer", nullable: false),
+                    Platforms = table.Column<int[]>(type: "integer[]", nullable: false),
                     UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
@@ -78,7 +79,7 @@ namespace ImageManager.Migrations
                 {
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TagName = table.Column<string>(type: "text", nullable: false)
+                    Name = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -203,34 +204,11 @@ namespace ImageManager.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "DownloadedImages",
-                schema: "identity",
-                columns: table => new
-                {
-                    id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<string>(type: "text", nullable: false),
-                    Platform = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DownloadedImages", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_DownloadedImages_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalSchema: "identity",
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Images",
                 schema: "identity",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Hash = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
                     Rating = table.Column<int>(type: "integer", nullable: false),
                     UserId = table.Column<string>(type: "text", nullable: false),
@@ -254,7 +232,7 @@ namespace ImageManager.Migrations
                 columns: table => new
                 {
                     CharactersId = table.Column<int>(type: "integer", nullable: false),
-                    ImageId = table.Column<int>(type: "integer", nullable: false)
+                    ImageId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -276,11 +254,41 @@ namespace ImageManager.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "DownloadedImages",
+                schema: "identity",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    Platform = table.Column<int>(type: "integer", nullable: false),
+                    ImageId = table.Column<Guid>(type: "uuid", nullable: true),
+                    DownloadedId = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DownloadedImages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DownloadedImages_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "identity",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_DownloadedImages_Images_ImageId",
+                        column: x => x.ImageId,
+                        principalSchema: "identity",
+                        principalTable: "Images",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ImageTag",
                 schema: "identity",
                 columns: table => new
                 {
-                    ImageId = table.Column<int>(type: "integer", nullable: false),
+                    ImageId = table.Column<Guid>(type: "uuid", nullable: false),
                     TagsId = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
@@ -310,7 +318,7 @@ namespace ImageManager.Migrations
                     Id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
                     UserId = table.Column<string>(type: "text", nullable: false),
-                    ImageId = table.Column<int>(type: "integer", nullable: false),
+                    ImageId = table.Column<Guid>(type: "uuid", nullable: false),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Expires = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     Token = table.Column<string>(type: "text", nullable: false)
@@ -383,6 +391,13 @@ namespace ImageManager.Migrations
                 schema: "identity",
                 table: "CharacterImage",
                 column: "ImageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DownloadedImages_ImageId",
+                schema: "identity",
+                table: "DownloadedImages",
+                column: "ImageId",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_DownloadedImages_UserId",

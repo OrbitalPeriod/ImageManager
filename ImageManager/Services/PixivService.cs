@@ -13,11 +13,11 @@ public interface IPixivService
 
 public class PixivService(string downloadRefreshToken) : IPixivService
 {
-    private readonly PixivAppApi _api = new PixivAppApi(new ConnectionConfig
+    private readonly PixivAppApi _api = new(new ConnectionConfig
     {
         MaxRetries = 3,
         EnableRetry = true,
-        TimeoutMs = 3000,
+        TimeoutMs = 3000
     });
     private readonly string _downloadRefreshToken = downloadRefreshToken;
     private DateTime _nextRefresh = DateTime.MinValue;
@@ -43,12 +43,17 @@ public class PixivService(string downloadRefreshToken) : IPixivService
         var result = await userApi.AuthAsync(refreshToken);
         if (result.HasError) throw new PixivAuthException("Pixiv authentication failed" + result.Error);
 
-        var restrict = checkPrivate ? RestrictType.Private : RestrictType.Public;
+        var publicBookmarks = await userApi.GetUserBookmarksIllustAsync(userId);
+        if (publicBookmarks.HasError) throw new PixivApiException("Error fetching bookmarks");
 
-        var bookmarks = await userApi.GetUserBookmarksIllustAsync(userId, restrict);
+        if (checkPrivate)
+        {
+            var privateBookmarks = await userApi.GetUserBookmarksIllustAsync(userId, RestrictType.Private);
+            if (privateBookmarks.HasError) throw new PixivApiException("Error fetching private bookmarks");
+            publicBookmarks.Illusts?.AddRange(privateBookmarks.Illusts ?? []);
+        }
 
-        if (bookmarks.HasError) throw new PixivApiException("Error fetching bookmarks");
-        return bookmarks.Illusts?.ToArray() ?? [];
+        return publicBookmarks.Illusts?.ToArray() ?? [];
     }
 
     public async Task<byte[]> DownloadImage(IllustInfo illustration)
