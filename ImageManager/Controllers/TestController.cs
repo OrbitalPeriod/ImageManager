@@ -10,11 +10,11 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace ImageManager.Controllers;
 
 [ApiController]
-public class TestController(IPixivService pixivService, ITaggerService taggerService, IImageImportManager importManager, ApplicationDbContext dbContext) : Controller
+public class TestController(IPixivService pixivService, ITaggerService taggerService, IPixivImageImportManager importManager, ApplicationDbContext dbContext) : Controller
 {
     private readonly IPixivService _pixivService = pixivService;
     private readonly ITaggerService _taggerService = taggerService;
-    private readonly IImageImportManager _importManager = importManager;
+    private readonly IPixivImageImportManager _importManager = importManager;
     private readonly ApplicationDbContext _dbContext = dbContext;
 
     public record TestRecord(string PixivUserId, string PixivUserToken);
@@ -25,8 +25,15 @@ public class TestController(IPixivService pixivService, ITaggerService taggerSer
         var user = _dbContext.Users.Include(u => u.Images).Include(u => u.DownloadedImages).First(x => x.UserName == "test");
         var images = _dbContext.Images.Where(x => x.User == user).ToList();
 
-
-
-        await _importManager.ImportPixivBookmarks(user, record.PixivUserId, record.PixivUserToken, true);
+        PlatformToken token = new PlatformToken()
+        {
+            Platform = Platform.Pixiv,
+            PlatformUserId = record.PixivUserId,
+            Token = record.PixivUserToken,
+            User = user,
+        };
+        
+        await _dbContext.PlatformTokens.AddAsync(token);
+        await _dbContext.SaveChangesAsync();
     }
 }

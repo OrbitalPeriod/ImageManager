@@ -12,6 +12,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Image> Images { get; set; }
     public DbSet<ShareToken> ShareTokens { get; set; }
     public DbSet<Tag> Tags { get; set; }
+    public DbSet<PlatformToken> PlatformTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -23,6 +24,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Image>().HasMany(e => e.Characters).WithMany(e => e.Image);
         builder.Entity<User>().HasMany(e => e.Images).WithOne(e => e.User);
         builder.Entity<User>().HasMany(e => e.ShareTokens).WithOne(e => e.User).HasForeignKey(st => st.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<User>().HasMany(e => e.PlatformTokens).WithOne(e => e.User);
         builder.Entity<Image>().HasMany(e => e.ShareTokens).WithOne(e => e.Image).HasForeignKey(st => st.ImageId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<User>().HasMany(e => e.DownloadedImages).WithOne(e => e.User);
         builder.Entity<Image>().HasOne(e => e.DownloadedImage).WithOne(e => e.Image).HasForeignKey<DownloadedImage>(d => d.ImageId).IsRequired(false);

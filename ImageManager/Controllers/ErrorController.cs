@@ -7,14 +7,18 @@ using PixivRateLimitException = PixivCS.Exceptions.PixivRateLimitException;
 namespace ImageManager.Controllers;
 
 [ApiController]
-public class ErrorController : Controller
+public class ErrorController(ILoggerService loggerService) : Controller
 {
+    private readonly ILoggerService _logger = loggerService;
+    
     [Route("/error")]
     [HttpGet, HttpPost]
     public IActionResult HandleError([FromServices] IHostEnvironment env)
     {
         var exception = HttpContext.Features.Get<IExceptionHandlerFeature>()?.Error;
 
+        _logger.LogError($"Exception: {exception?.GetType().Name}, Message: {exception?.Message}, StackTrace: {exception?.StackTrace}");
+        
         return exception switch
         {
             PixivAuthException => Problem(title: "Pixiv authentication failed", statusCode: 401),
