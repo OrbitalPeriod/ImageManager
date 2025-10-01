@@ -7,7 +7,7 @@ namespace ImageManager.Services;
 
 public interface IPixivService
 {
-    public Task<IllustInfo[]> GetLikedBookmarks(string userId, string refreshToken, bool checkPrivate);
+    public Task<IllustInfo[]> GetLikedBookmarks(string userId, string? refreshToken, bool checkPrivate);
     public Task<byte[]> DownloadImage(IllustInfo illustration);
 }
 
@@ -37,21 +37,23 @@ public class PixivService(string downloadRefreshToken) : IPixivService
         }
     }
 
-    public async Task<IllustInfo[]> GetLikedBookmarks(string userId, string refreshToken, bool checkPrivate)
+    public async Task<IllustInfo[]> GetLikedBookmarks(string userId, string? refreshToken, bool checkPrivate)
     {
-        var userApi = new PixivAppApi();
-        var result = await userApi.AuthAsync(refreshToken);
-        if (result.HasError) throw new PixivAuthException("Pixiv authentication failed" + result.Error);
-
-        var publicBookmarks = await userApi.GetUserBookmarksIllustAsync(userId);
+        var publicBookmarks = await _api.GetUserBookmarksIllustAsync(userId);
         if (publicBookmarks.HasError) throw new PixivApiException("Error fetching bookmarks");
 
-        if (checkPrivate)
-        {
-            var privateBookmarks = await userApi.GetUserBookmarksIllustAsync(userId, RestrictType.Private);
-            if (privateBookmarks.HasError) throw new PixivApiException("Error fetching private bookmarks");
-            publicBookmarks.Illusts?.AddRange(privateBookmarks.Illusts ?? []);
-        }
+        if (!checkPrivate || string.IsNullOrWhiteSpace(refreshToken)) return publicBookmarks.Illusts?.ToArray() ?? [];
+        
+        var userApi = new PixivAppApi();
+        AuthResult result; 
+            
+        result = await userApi.AuthAsync(refreshToken);   
+        if (result.HasError) throw new PixivAuthException("Pixiv authentication failed" + result.Error);
+            
+        var privateBookmarks = await userApi.GetUserBookmarksIllustAsync(userId, RestrictType.Private);
+        if (privateBookmarks.HasError) throw new PixivApiException("Error fetching private bookmarks");
+            
+        publicBookmarks.Illusts?.AddRange(privateBookmarks.Illusts ?? []);
 
         return publicBookmarks.Illusts?.ToArray() ?? [];
     }

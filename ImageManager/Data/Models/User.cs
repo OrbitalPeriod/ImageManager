@@ -8,5 +8,5 @@ public class User : IdentityUser
     public ICollection<ShareToken> ShareTokens { get; set; } = [];
     public ICollection<DownloadedImage> DownloadedImages { get; set; } = [];
     public Publicity DefaultPublicity { get; set; } = Publicity.Open;
-    public List<Platform> Platforms { get; set; } = [];
+    public ICollection<PlatformToken> PlatformTokens { get; set; } = [];
 }

@@ -48,7 +48,10 @@ builder.Services.AddSingleton<ITaggerService>(sp => new TaggerService(builder.Co
 builder.Services.AddSingleton<IFileService>(sp =>
     new FileService(builder.Configuration["FILE_DIRECTORY"] ?? throw new Exception("FILE_DIRECTORY is required")));
 builder.Services.AddScoped<IDatabaseService, DatabaseService>();
-builder.Services.AddScoped<IImageImportManager, ImageImportManager>();
+builder.Services.AddScoped<IPixivImageImportManager, PixivImportManager>();
+builder.Services.AddSingleton<ILoggerService, LoggerService>();
+
+builder.Services.AddHostedService<PixivSyncService>();
 
 #region API Setup
 
