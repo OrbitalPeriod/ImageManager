@@ -12,4 +12,5 @@ public class ShareToken
     public DateTime Created { get; set; }
     public DateTime Expires { get; set; }
     public string Token { get; set; }
+    public bool IsExpired => DateTime.UtcNow > Expires;
 }

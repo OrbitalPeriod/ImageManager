@@ -6,6 +6,6 @@ public class DownloadedImage
     public required User User { get; set; }
     public required Platform Platform { get; set; }
     public Guid? ImageId { get; set; }
-    public required int DownloadedId { get; set; }
+    public int DownloadedId { get; set; }
     public Image? Image { get; set; }
 }

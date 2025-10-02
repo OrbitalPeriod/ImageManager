@@ -35,10 +35,20 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 // Configure cookie Authentication
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.LoginPath = "/Account/Login";
-    options.LogoutPath = "/Account/Logout";
+    //options.LoginPath = "/Account/Login";
+    //options.LogoutPath = "/Account/Logout";
     options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
     options.SlidingExpiration = true;
+    options.Events.OnRedirectToLogin = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        return Task.CompletedTask;
+    };
+    options.Events.OnRedirectToAccessDenied = context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return Task.CompletedTask;
+    };
 });
 
 #endregion
@@ -49,7 +59,7 @@ builder.Services.AddSingleton<IFileService>(sp =>
     new FileService(builder.Configuration["FILE_DIRECTORY"] ?? throw new Exception("FILE_DIRECTORY is required")));
 builder.Services.AddScoped<IDatabaseService, DatabaseService>();
 builder.Services.AddScoped<IPixivImageImportManager, PixivImportManager>();
-builder.Services.AddSingleton<ILoggerService, LoggerService>();
+builder.Services.AddScoped<IImageImportService, ImageImportService>();
 
 builder.Services.AddHostedService<PixivSyncService>();
 

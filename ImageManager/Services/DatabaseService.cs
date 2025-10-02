@@ -12,8 +12,6 @@ public interface IDatabaseService
 
 public class DatabaseService(ApplicationDbContext dbContext) : IDatabaseService
 {
-    private readonly ApplicationDbContext _databaseService = dbContext;
-
     public async Task<ICollection<Character>> GetCharacters(ICollection<string> names)
     {
         var processedNames = names.Select(x => x.Trim().ToLower()).Distinct().ToArray();
