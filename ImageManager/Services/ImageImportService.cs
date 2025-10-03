@@ -53,7 +53,7 @@ public class ImageImportService(ITaggerService taggerService, IFileService fileS
             Tags = tagEntities,
             Hash = hash,
             Publicity = publicity,
-            Rating = (Data.Models.Rating)imageData.Rating,
+            AgeRating = (AgeRating)imageData.Rating,
             ShareTokens = [],
             UserId = userId
         };

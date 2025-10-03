@@ -1,5 +1,3 @@
-using SixLabors.ImageSharp;
-
 namespace ImageManager.Services;
 
 public class PixivSyncService(IServiceScopeFactory scopeFactory, ILogger<PixivSyncService> logger) : BackgroundService

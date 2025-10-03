@@ -1,6 +1,4 @@
 using ImageManager.Data;
-using ImageManager.Data.Models;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace ImageManager.Extensions;

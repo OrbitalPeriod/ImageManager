@@ -7,9 +7,9 @@ public class Image
     public ICollection<Tag> Tags { get; set; } = [];
     public ICollection<Character> Characters { get; set; } = [];
     public ICollection<ShareToken> ShareTokens { get; set; } = [];
-    public Rating Rating { get; set; }
-    public string UserId { get; set; }
-    public User User { get; set; }
+    public AgeRating AgeRating { get; set; }
+    public string UserId { get; set; } = "";
+    public User User { get; set; } = null!;
     public Publicity Publicity { get; set; }
     public DownloadedImage? DownloadedImage { get; set; }
 }

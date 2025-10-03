@@ -2,9 +2,7 @@ using CoenM.ImageHash.HashAlgorithms;
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using PixivCS.Models.Illust;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace ImageManager.Services;
 
@@ -16,8 +14,6 @@ public interface IPixivImageImportManager
 
 public class PixivImportManager(IPixivService pixivService, ApplicationDbContext dbContext, IImageImportService imageImportService, ILogger<PixivImportManager> logger) : IPixivImageImportManager
 {
-    private readonly AverageHash _hash = new();
-
     public async Task ImportAllUserBookmarks()
     {
         var users = await dbContext.Users.Include(u => u.PlatformTokens).Where(u => u.PlatformTokens.Count(pft => pft.Platform == Platform.Pixiv) > 0).ToListAsync();

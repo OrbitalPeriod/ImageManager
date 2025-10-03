@@ -26,7 +26,7 @@ public class PixivService(string downloadRefreshToken) : IPixivService
     {
         var result = await _api.AuthAsync(_downloadRefreshToken);
         if (result.HasError) throw new PixivAuthException("Pixiv authentication failed" + result.Error);
-        this._nextRefresh = result.ExpiresAt;
+        _nextRefresh = result.ExpiresAt;
     }
 
     private async Task EnsureAuthenticated()

@@ -27,6 +27,13 @@ public class TestAuthController(UserManager<User> userManager, SignInManager<Use
         return Ok(result.Succeeded ? "Login success" : "Login failed");
     }
 
+    [HttpGet("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        await _signInManager.SignOutAsync();
+        return Ok("Logged out");
+    }
+
     [HttpGet("me")]
     public IActionResult Me()
     {
