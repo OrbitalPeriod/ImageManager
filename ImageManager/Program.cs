@@ -1,13 +1,9 @@
-using DotNetEnv;
-using DotNetEnv.Configuration;
-using ImageManager;
 using ImageManager.Data;
 using ImageManager.Extensions;
 using ImageManager.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using PixivCS.Api;
 using User = ImageManager.Data.Models.User;
 
 DotNetEnv.Env.TraversePath().Load();
@@ -53,9 +49,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 #endregion
 
-builder.Services.AddSingleton<IPixivService>(sp => new PixivService(builder.Configuration["PIXIV_TOKEN"] ?? throw new Exception("PIXIV_TOKEN is required")));
-builder.Services.AddSingleton<ITaggerService>(sp => new TaggerService(builder.Configuration["ANIMETAGGER_URL"] ?? throw new Exception("ANIMETAGGER_URL is required")));
-builder.Services.AddSingleton<IFileService>(sp =>
+builder.Services.AddSingleton<IPixivService>(_ => new PixivService(builder.Configuration["PIXIV_TOKEN"] ?? throw new Exception("PIXIV_TOKEN is required")));
+builder.Services.AddSingleton<ITaggerService>(_ => new TaggerService(builder.Configuration["ANIMETAGGER_URL"] ?? throw new Exception("ANIMETAGGER_URL is required")));
+builder.Services.AddSingleton<IFileService>(_ =>
     new FileService(builder.Configuration["FILE_DIRECTORY"] ?? throw new Exception("FILE_DIRECTORY is required")));
 builder.Services.AddScoped<IDatabaseService, DatabaseService>();
 builder.Services.AddScoped<IPixivImageImportManager, PixivImportManager>();
@@ -108,3 +104,5 @@ app.UseExceptionHandler("/error");
 
 app.UseCors();
 app.Run();
+
+//TODO: Add dhecking duplicate hashes when importing

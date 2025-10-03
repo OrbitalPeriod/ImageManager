@@ -1,6 +1,6 @@
 namespace ImageManager.Data.Models;
 
-public enum Rating
+public enum AgeRating
 {
     General,
     Sensitive,
