@@ -104,5 +104,3 @@ app.UseExceptionHandler("/error");
 
 app.UseCors();
 app.Run();
-
-//TODO: Add dhecking duplicate hashes when importing
