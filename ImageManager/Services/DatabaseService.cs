@@ -12,6 +12,8 @@ public interface IDatabaseService
     public IQueryable<Image> AccessibleImages(User? user, Guid? token);
     public Task<Image?> GetImageById(Guid id);
     public Task<bool> ImageExists(Guid id);
+    public Task SavePlatformToken(PlatformToken token);
+    public IQueryable<PlatformToken> UserPlatformTokens(string userId);
 }
 
 public class DatabaseService(ApplicationDbContext dbContext) : IDatabaseService
@@ -23,6 +25,11 @@ public class DatabaseService(ApplicationDbContext dbContext) : IDatabaseService
             .Include(i => i.Tags)
             .Include(i => i.Characters)
             .FirstOrDefaultAsync(i => i.Id == id);
+    }
+    public async Task SavePlatformToken(PlatformToken token)
+    {
+        dbContext.PlatformTokens.Add(token);
+        await dbContext.SaveChangesAsync();
     }
     public async Task<bool> ImageExists(Guid id)
     {
@@ -114,5 +121,10 @@ public class DatabaseService(ApplicationDbContext dbContext) : IDatabaseService
             (image.Publicity == Publicity.Restricted && user != null) || // Restricted images => only logged-in users
             (token != null && image.ShareTokens.Any(stk => stk.Id == token && !stk.IsExpired)) // if a token is provided, validate it
         );
+    }
+    
+    public IQueryable<PlatformToken> UserPlatformTokens(string userId)
+    {
+        return dbContext.PlatformTokens.Where(t => t.UserId == userId);
     }
 }

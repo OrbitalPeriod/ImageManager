@@ -3,8 +3,10 @@ using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace ImageManager.Controllers;
@@ -13,8 +15,9 @@ namespace ImageManager.Controllers;
 [Route("/api/images")]
 public class ImageController(IFileService fileService, IDatabaseService databaseService, ApplicationDbContext dbContext, UserManager<User> userManager, IImageImportService imageImportService) : Controller
 {
+    public record GetImagesResponse(Guid Id, AgeRating Rating);
     [HttpGet]
-    public async Task<IActionResult> GetImages([FromQuery] Guid? token, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<ActionResult<PaginatedResponse<GetImagesResponse>>> GetImages([FromQuery] Guid? token, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
         if (page < 1) page = 1;
         if (pageSize is < 1 or > 200) pageSize = 200;
@@ -29,14 +32,11 @@ public class ImageController(IFileService fileService, IDatabaseService database
         var images = await baseQuery.OrderByDescending(i => i.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Include(i => i.Tags)
-            .Include(i => i.Characters)
-            .Include(i => i.User)
             .ToArrayAsync();
 
-        var imageData = images.Select(i => new ImageDataResponse(i.Id, i.Tags.Select(t => t.Name).ToArray(), i.Characters.Select(character => character.Name).ToArray(), i.AgeRating, i.User.Id, i.User.UserName)).ToArray();
-
-        var response = new PaginatedResponse<ImageDataResponse>()
+        var imageData = images.Select(i => new GetImagesResponse(i.Id, i.AgeRating)).ToArray();
+        
+        var response = new PaginatedResponse<GetImagesResponse>()
         {
             Data = imageData,
             Page = page,
@@ -47,9 +47,9 @@ public class ImageController(IFileService fileService, IDatabaseService database
 
         return Ok(response);
     }
-
+    
     [HttpGet("{imageId}")]
-    public async Task<IActionResult> Test(Guid imageId, [FromQuery] Guid? token)
+    public async Task<IActionResult> GetImage(Guid imageId, [FromQuery] Guid? token)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
 
@@ -67,7 +67,7 @@ public class ImageController(IFileService fileService, IDatabaseService database
 
         return await ReturnImage(image);
     }
-
+    
     private async Task<IActionResult> ReturnImage(Image image)
     {
         var mimeType = "image/png";
@@ -75,9 +75,9 @@ public class ImageController(IFileService fileService, IDatabaseService database
         return File(fileBytes, mimeType);
     }
 
-    public record ImageDataResponse(Guid Id, ICollection<string> Tags, ICollection<string> Characters, AgeRating Rating, string OwnerId, string? OwnerName);
+    public record ImageDataResponse(Guid Id, ICollection<string> Tags, ICollection<string> Characters, AgeRating Rating, Publicity Publicity ,string OwnerId, string? OwnerName);
     [HttpGet("{imageId}/data")]
-    public async Task<IActionResult> Data(Guid imageId, [FromQuery] Guid? token)
+    public async Task<ActionResult<ImageDataResponse>> Data(Guid imageId, [FromQuery] Guid? token)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
 
@@ -94,7 +94,7 @@ public class ImageController(IFileService fileService, IDatabaseService database
         }
 
         var response = new ImageDataResponse(image.Id, image.Tags.Select(x => x.Name).ToArray(),
-            image.Characters.Select(x => x.Name).ToArray(), image.AgeRating, image.User.Id,
+            image.Characters.Select(x => x.Name).ToArray(), image.AgeRating, image.Publicity, image.User.Id,
             image.User.UserName);
 
         return Ok(response);
@@ -102,7 +102,7 @@ public class ImageController(IFileService fileService, IDatabaseService database
 
     public record UploadImageRequest(IFormFile File, Publicity? Publicity);
 
-    [HttpPost("upload")]
+    [HttpPut("upload")]
     [Authorize]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> UploadImageRequests([FromForm] UploadImageRequest request)
@@ -141,5 +141,22 @@ public class ImageController(IFileService fileService, IDatabaseService database
         }
     }
 
+    [HttpDelete("delete/{imageId}")]
+    [Authorize]
+    public async Task<IActionResult> DeleteImage(Guid imageId)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+        if (user == null)
+            return Unauthorized();
 
+        var image = await databaseService.GetImageById(imageId);
+        if (image == null)
+            return NotFound();
+
+        if (image.User.Id != user.Id)
+            return Forbid();
+
+        dbContext.Images.Remove(image);
+        return Ok();
+    }
 }
