@@ -141,5 +141,5 @@ public class ImageController(IFileService fileService, IDatabaseService database
         }
     }
 
-    
+
 }

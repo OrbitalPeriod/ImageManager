@@ -51,7 +51,7 @@ public class ImageImportService(ITaggerService taggerService, IFileService fileS
             logger.LogInformation("Image already exists in database, skipping");
             return null;
         }
-        
+
         var imageEntity = new Image()
         {
             Id = guid,
