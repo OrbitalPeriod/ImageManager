@@ -11,5 +11,5 @@ public class PlatformToken
     public bool CheckPrivate { get; set; } = false;
 
     public string UserId { get; set; } = null!;
-    public required User User { get; set; } = null!;
+    public User User { get; set; } = null!;
 }

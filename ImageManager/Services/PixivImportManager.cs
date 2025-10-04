@@ -39,7 +39,7 @@ public class PixivImportManager(IPixivService pixivService, ApplicationDbContext
         var illustIds = illustrations.Select(x => x.Id).ToArray();
         var downloadedIds = await dbContext.DownloadedImages
             .Where(d => d.User == user)
-            .Select(d => d.Id)
+            .Select(d => d.PlatformImageId)
             .ToListAsync();
 
         var toDownload = illustIds.Except(downloadedIds).ToList();
@@ -79,6 +79,7 @@ public class PixivImportManager(IPixivService pixivService, ApplicationDbContext
             User = user,
             ImageId = imageGuid,
             Platform = Platform.Pixiv,
+            PlatformImageId = illustration.Id,
         });
 
         await transaction.CommitAsync();

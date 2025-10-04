@@ -12,12 +12,12 @@ using Microsoft.Extensions.Caching.Memory;
 namespace ImageManager.Controllers;
 
 [ApiController]
-[Route("/api/tags")]
-public class TagController(UserManager<User> userManager, ILogger<TagController> logger, IDatabaseService databaseService) : Controller
+[Route("/api/characters")]
+public class CharacterController(UserManager<User> userManager, ILogger<CharacterController> logger, IDatabaseService databaseService) : Controller
 {
-    public record GetTagsResponse(int TagId, string TagName, int Count);
+    public record GetCharacterResponse(int TagId, string CharacterName, int Count);
     [HttpGet]
-    public async Task<ActionResult<PaginatedResponse<GetTagsResponse>>> GetTags([FromQuery] Guid? token, [FromQuery] int page = 1,
+    public async Task<ActionResult<PaginatedResponse<GetCharacterResponse>>> GetCharacters([FromQuery] Guid? token, [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
         if (page < 1) page = 1;
@@ -31,12 +31,12 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
         var totalPages = (int)Math.Ceiling(totalCount / (double)(pageSize));
 
         var tags = await baseQuery
-            .SelectMany(i => i.Tags)
+            .SelectMany(i => i.Characters)
             .GroupBy(t => new { t.Id, t.Name })
             .Select(g => new
             {
                 TagId = g.Key.Id,
-                TagName = g.Key.Name,
+                CharacterName = g.Key.Name,
                 Count = g.Count()
             })
             .OrderByDescending(x => x.Count)
@@ -44,9 +44,9 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
             .Take(pageSize)
             .ToListAsync();
 
-        var response = new PaginatedResponse<GetTagsResponse>()
+        var response = new PaginatedResponse<GetCharacterResponse>()
         {
-            Data = tags.Select(t => new GetTagsResponse(t.TagId, t.TagName, t.Count)).ToArray(),
+            Data = tags.Select(t => new GetCharacterResponse(t.TagId, t.CharacterName, t.Count)).ToArray(),
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,
@@ -57,7 +57,7 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
     }
     
     [HttpGet("search")]
-    public async Task<ActionResult<PaginatedResponse<GetTagsResponse>>> SearchTags(
+    public async Task<ActionResult<PaginatedResponse<GetCharacterResponse>>> SearchCharacters(
         [FromQuery] string q = "",
         [FromQuery] Guid? token = null,
         [FromQuery] int page = 1,
@@ -69,7 +69,7 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
         var user = await userManager.GetUserAsync(HttpContext.User);
         var baseQuery = databaseService.AccessibleImages(user, token);
 
-        var tagsQuery = baseQuery.SelectMany(i => i.Tags);
+        var tagsQuery = baseQuery.SelectMany(i => i.Characters);
         
         if (!string.IsNullOrWhiteSpace(q))
         {
@@ -82,7 +82,7 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
             .Select(g => new
             {
                 TagId = g.Key.Id,
-                TagName = g.Key.Name,
+                CharacterName = g.Key.Name,
                 Count = g.Count()
             });
 
@@ -95,9 +95,9 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
             .Take(pageSize)
             .ToListAsync();
 
-        var response = new PaginatedResponse<GetTagsResponse>()
+        var response = new PaginatedResponse<GetCharacterResponse>()
         {
-            Data = tags.Select(t => new GetTagsResponse(t.TagId, t.TagName, t.Count)).ToArray(),
+            Data = tags.Select(t => new GetCharacterResponse(t.TagId, t.CharacterName, t.Count)).ToArray(),
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,

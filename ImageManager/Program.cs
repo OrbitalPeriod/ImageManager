@@ -31,8 +31,8 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 // Configure cookie Authentication
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    //options.LoginPath = "/Account/Login";
-    //options.LogoutPath = "/Account/Logout";
+    options.LoginPath = "/Auth/Login";
+    options.LogoutPath = "/Auth/Logout";
     options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
     options.SlidingExpiration = true;
     options.Events.OnRedirectToLogin = context =>

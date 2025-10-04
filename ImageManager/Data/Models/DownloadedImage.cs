@@ -8,6 +8,7 @@ public class DownloadedImage
     public required User User { get; set; } = null!;
 
     public required Platform Platform { get; set; }
+    public required int PlatformImageId { get; set; }
 
     public Guid? ImageId { get; set; } = null;
     public Image? Image { get; set; } = null;
