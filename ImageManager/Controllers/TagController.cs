@@ -13,7 +13,7 @@ namespace ImageManager.Controllers;
 [ApiController]
 [Route("/api/tags")]
 public class TagController(UserManager<User> userManager, ILogger<TagController> logger, IDatabaseService databaseService) : Controller
-{   
+{
     public record GetTagsResponse(int TagId, string TagName, int Count);
     [HttpGet]
     public async Task<IActionResult> GetTags([FromQuery] Guid? token, [FromQuery] int page = 1,
@@ -21,17 +21,17 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
     {
         if (page < 1) page = 1;
         if (pageSize is < 1 or > 200) pageSize = 200;
-        
+
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var baseQuery = databaseService.AccessibleImages(user, token);
-        
+
         var totalCount = await baseQuery.CountAsync();
         var totalPages = (int)Math.Ceiling(totalCount / (double)(pageSize));
 
         var tags = await baseQuery
             .SelectMany(i => i.Tags)
-            .GroupBy(t => new { t.Id, t.Name }) 
+            .GroupBy(t => new { t.Id, t.Name })
             .Select(g => new
             {
                 TagId = g.Key.Id,
