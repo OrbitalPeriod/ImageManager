@@ -39,7 +39,7 @@ public class PixivImportManager(IPixivService pixivService, ApplicationDbContext
         var illustIds = illustrations.Select(x => x.Id).ToArray();
         var downloadedIds = await dbContext.DownloadedImages
             .Where(d => d.User == user)
-            .Select(d => d.DownloadedId)
+            .Select(d => d.Id)
             .ToListAsync();
 
         var toDownload = illustIds.Except(downloadedIds).ToList();

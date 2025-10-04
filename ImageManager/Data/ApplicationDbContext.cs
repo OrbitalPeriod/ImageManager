@@ -21,7 +21,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.HasDefaultSchema("identity");
 
         builder.Entity<Image>().HasMany(e => e.Tags).WithMany(e => e.Image);
-        builder.Entity<Image>().HasMany(e => e.Characters).WithMany(e => e.Image);
+        builder.Entity<Image>().HasMany(e => e.Characters).WithMany(e => e.Images);
         builder.Entity<User>().HasMany(e => e.Images).WithOne(e => e.User);
         builder.Entity<User>().HasMany(e => e.ShareTokens).WithOne(e => e.User).HasForeignKey(st => st.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<User>().HasMany(e => e.PlatformTokens).WithOne(e => e.User);

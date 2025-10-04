@@ -1,6 +1,7 @@
 using CoenM.ImageHash.HashAlgorithms;
 using ImageManager.Data;
 using ImageManager.Data.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using SixLabors.ImageSharp.PixelFormats;
 
@@ -31,7 +32,6 @@ public class ImageImportService(ITaggerService taggerService, IFileService fileS
         var tagEntities = await databaseService.GetTags(imageData.GeneralTags);
         var characterEntities = await databaseService.GetCharacters(imageData.CharacterTags);
 
-
         Guid guid;
         ulong hash;
         try
@@ -46,6 +46,12 @@ public class ImageImportService(ITaggerService taggerService, IFileService fileS
             return null;
         }
 
+        if (await dbContext.Images.AnyAsync(i => i.Hash == hash && i.UserId == userId))
+        {
+            logger.LogInformation("Image already exists in database, skipping");
+            return null;
+        }
+        
         var imageEntity = new Image()
         {
             Id = guid,
