@@ -31,7 +31,7 @@ public class CharacterController(UserManager<User> userManager, ILogger<Characte
         var totalPages = (int)Math.Ceiling(totalCount / (double)(pageSize));
 
         var tags = await baseQuery
-            .SelectMany(i => i.Characters)
+            .SelectMany(i => i.Image.Characters)
             .GroupBy(t => new { t.Id, t.Name })
             .Select(g => new
             {
@@ -55,7 +55,7 @@ public class CharacterController(UserManager<User> userManager, ILogger<Characte
 
         return Ok(response);
     }
-    
+
     [HttpGet("search")]
     public async Task<ActionResult<PaginatedResponse<GetCharacterResponse>>> SearchCharacters(
         [FromQuery] string q = "",
@@ -69,8 +69,8 @@ public class CharacterController(UserManager<User> userManager, ILogger<Characte
         var user = await userManager.GetUserAsync(HttpContext.User);
         var baseQuery = databaseService.AccessibleImages(user, token);
 
-        var tagsQuery = baseQuery.SelectMany(i => i.Characters);
-        
+        var tagsQuery = baseQuery.SelectMany(i => i.Image.Characters);
+
         if (!string.IsNullOrWhiteSpace(q))
         {
             q = q.ToLower();

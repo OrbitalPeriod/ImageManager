@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace ImageManager.Controllers;
@@ -31,7 +32,7 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
         var totalPages = (int)Math.Ceiling(totalCount / (double)(pageSize));
 
         var tags = await baseQuery
-            .SelectMany(i => i.Tags)
+            .SelectMany(uoid => uoid.Image.Tags)
             .GroupBy(t => new { t.Id, t.Name })
             .Select(g => new
             {
@@ -55,7 +56,7 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
 
         return Ok(response);
     }
-    
+
     [HttpGet("search")]
     public async Task<ActionResult<PaginatedResponse<GetTagsResponse>>> SearchTags(
         [FromQuery] string q = "",
@@ -69,8 +70,8 @@ public class TagController(UserManager<User> userManager, ILogger<TagController>
         var user = await userManager.GetUserAsync(HttpContext.User);
         var baseQuery = databaseService.AccessibleImages(user, token);
 
-        var tagsQuery = baseQuery.SelectMany(i => i.Tags);
-        
+        var tagsQuery = baseQuery.SelectMany(uoi => uoi.Image.Tags);
+
         if (!string.IsNullOrWhiteSpace(q))
         {
             q = q.ToLower();

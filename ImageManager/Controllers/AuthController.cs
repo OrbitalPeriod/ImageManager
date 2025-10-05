@@ -17,7 +17,7 @@ public class AuthController(UserManager<User> userManager, SignInManager<User> s
 
         return Ok(result.Succeeded ? "User created!" : string.Join(", ", result.Errors.Select(e => e.Description)));
     }
-    
+
     public record LoginRequest(string Email, string Password);
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)

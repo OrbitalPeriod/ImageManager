@@ -32,25 +32,42 @@ public class PixivImportManager(IPixivService pixivService, ApplicationDbContext
         }
     }
 
-    public async Task ImportPixivBookmarks(User user, string pixivUserId, string? pixivRefreshToken, bool checkPrivate)
+    private async Task ImportPixivBookmarks(User user, string pixivUserId, string? pixivRefreshToken, bool checkPrivate)
     {
         var illustrations = await pixivService.GetLikedBookmarks(pixivUserId, pixivRefreshToken, checkPrivate);
-
         var illustIds = illustrations.Select(x => x.Id).ToArray();
+
         var downloadedIds = await dbContext.DownloadedImages
-            .Where(d => d.User == user)
-            .Select(d => d.PlatformImageId)
+            .Where(di => illustIds.Contains(di.PlatformImageId))
+            .Select(di => di.PlatformImageId)
             .ToListAsync();
-
-        var toDownload = illustIds.Except(downloadedIds).ToList();
-
-        logger.LogInformation("Downloading: " + toDownload.Count + " new images" + " For user: " + user.UserName);
-
-        foreach (var illustration in toDownload.Select(x => illustrations.First(i => i.Id == x)))
+        
+        var toDowload = illustrations.Where(ill => !downloadedIds.Contains(ill.Id)).ToList();
+        logger.LogInformation($"Found {toDowload.Count} new illustrations for user {user.UserName} ({user.Id})");
+        foreach (var illustration in toDowload)
         {
             await DownloadImage(user, illustration);
         }
+        logger.LogInformation($"Finished importing {toDowload.Count} illustrations for user {user.UserName} ({user.Id})");
+
+        var exisiting = illustIds.Except(downloadedIds).ToArray();
+
+        var notAdded = await dbContext.DownloadedImages.Where(d => exisiting.Contains(d.Id))
+            .Where(di => di.Image.UserOwnedImages.Any(uoi => uoi.UserId != user.Id)).ToListAsync();
+
+        foreach (var existingImage in notAdded)
+        {
+            dbContext.Add(new UserOwnedImage()
+            {
+                UserId = user.Id,
+                ImageId = existingImage.ImageId,
+                Publicity = user.DefaultPublicity,
+            });
+        }
+        await dbContext.SaveChangesAsync();
+        logger.LogInformation($"Added {notAdded.Count} existing illustrations for user {user.UserName} ({user.Id})");
     }
+
 
     private async Task DownloadImage(User user, IllustInfo illustration)
     {
@@ -66,9 +83,9 @@ public class PixivImportManager(IPixivService pixivService, ApplicationDbContext
         }
 
         await using var transaction = await dbContext.Database.BeginTransactionAsync();
-        var imageGuid = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, transaction, user.Id);
+        var userOwnedId = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, transaction, user.Id);
 
-        if (imageGuid == null)
+        if (userOwnedId == null)
         {
             logger.LogError($"Failed to import image for {illustration}");
             return;
@@ -76,10 +93,9 @@ public class PixivImportManager(IPixivService pixivService, ApplicationDbContext
 
         dbContext.Add(new DownloadedImage()
         {
-            User = user,
-            ImageId = imageGuid,
             Platform = Platform.Pixiv,
             PlatformImageId = illustration.Id,
+            ImageId = await dbContext.UserOwnedImages.Where(uoi => uoi.Id == userOwnedId).Select(uoi => uoi.ImageId).FirstAsync()
         });
 
         await transaction.CommitAsync();
