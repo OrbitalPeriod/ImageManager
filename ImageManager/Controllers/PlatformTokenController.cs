@@ -14,15 +14,15 @@ public class PlatformTokenController(UserManager<User> userManager, IDatabaseSer
     public record AddTokenRequest(string Token, string PlatFormUserId, DateTime? Expires, Platform Platform, bool CheckPrivate);
     [Authorize]
     [HttpPut("add")]
-    public async Task<IActionResult> AddToken([FromBody]  AddTokenRequest request)
+    public async Task<IActionResult> AddToken([FromBody] AddTokenRequest request)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
-        
+
         if (user == null)
         {
             return Unauthorized();
         }
-        
+
         var platformToken = new PlatformToken
         {
             PlatformUserId = request.PlatFormUserId,
@@ -32,7 +32,7 @@ public class PlatformTokenController(UserManager<User> userManager, IDatabaseSer
             CheckPrivate = request.CheckPrivate,
             UserId = user.Id
         };
-        
+
         await databaseService.SavePlatformToken(platformToken);
         return Ok();
     }
@@ -46,9 +46,9 @@ public class PlatformTokenController(UserManager<User> userManager, IDatabaseSer
         {
             return Unauthorized();
         }
-        
+
         var tokens = await databaseService.UserPlatformTokens(user.Id).ToListAsync();
-        
+
         return Ok(tokens.Select(t => new
         {
             t.Id,
@@ -58,5 +58,25 @@ public class PlatformTokenController(UserManager<User> userManager, IDatabaseSer
             t.IsExpired,
             t.CheckPrivate
         }));
+    }
+
+    [Authorize]
+    [HttpDelete("delete/{id:int}")]
+    public async Task<IActionResult> DeletePlatformToken(int id)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+        if (user == null)
+        {
+            return Unauthorized();
+        }
+
+        var token = await databaseService.FindPlatformToken(id);
+        if (token == null || token.UserId != user.Id)
+        {
+            return NotFound();
+        }
+
+        await databaseService.DeletePlatformToken(token.Id);
+        return Ok();
     }
 }

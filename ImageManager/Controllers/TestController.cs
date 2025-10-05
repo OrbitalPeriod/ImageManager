@@ -10,5 +10,5 @@ namespace ImageManager.Controllers;
 [ApiController]
 public class TestController(IPixivService pixivService, ITaggerService taggerService, IPixivImageImportManager importManager, ApplicationDbContext dbContext, UserManager<User> userManager, IDatabaseService databaseService) : Controller
 {
-    
+
 }

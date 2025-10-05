@@ -32,41 +32,48 @@ public class ImageImportService(ITaggerService taggerService, IFileService fileS
         var tagEntities = await databaseService.GetTags(imageData.GeneralTags);
         var characterEntities = await databaseService.GetCharacters(imageData.CharacterTags);
 
-        Guid guid;
-        ulong hash;
-        try
+        Guid userOwnedImageGuid;
+        Guid imageGuid;
+
+        using var image = await SixLabors.ImageSharp.Image.LoadAsync<Rgba32>(new MemoryStream(imageBytes));
+        ulong hash = _hash.Hash(image.Clone());
+
+        var existingImage = await dbContext.Images.Include(i => i.UserOwnedImages).FirstOrDefaultAsync(i => i.Hash == hash);
+        if (existingImage != null && existingImage.UserOwnedImages.Any(uoi => uoi.UserId == userId))
         {
-            using var image = await SixLabors.ImageSharp.Image.LoadAsync<Rgba32>(new MemoryStream(imageBytes));
-            hash = _hash.Hash(image.Clone());
-            guid = await fileService.SaveFile(image);
-        }
-        catch (Exception e)
-        {
-            logger.LogError($"Failed to save image tags: {e.Message}");
+            logger.LogInformation("Image already exists and owned in database, skipping");
             return null;
         }
-
-        if (await dbContext.Images.AnyAsync(i => i.Hash == hash && i.UserId == userId))
+        else if (existingImage == null)
         {
-            logger.LogInformation("Image already exists in database, skipping");
-            return null;
+            userOwnedImageGuid = await fileService.SaveFile(image);
+            existingImage = new Image()
+            {
+                AgeRating = (AgeRating)imageData.Rating,
+                Characters = characterEntities,
+                Hash = hash,
+                Id = userOwnedImageGuid,
+                Tags = tagEntities
+            };
+            await dbContext.Images.AddAsync(existingImage);
+            await dbContext.SaveChangesAsync();
+        }
+        else
+        {
+            userOwnedImageGuid = Guid.NewGuid();
         }
 
-        var imageEntity = new Image()
+        var userOwnedImage = new UserOwnedImage()
         {
-            Id = guid,
-            Characters = characterEntities,
-            Tags = tagEntities,
-            Hash = hash,
+            Image = existingImage,
+            Id = userOwnedImageGuid,
             Publicity = publicity,
-            AgeRating = (AgeRating)imageData.Rating,
-            ShareTokens = [],
-            UserId = userId
+            UserId = userId,
         };
 
-        await dbContext.Images.AddAsync(imageEntity);
+        await dbContext.UserOwnedImages.AddAsync(userOwnedImage);
         await dbContext.SaveChangesAsync();
 
-        return guid;
+        return existingImage.Id;
     }
 }
