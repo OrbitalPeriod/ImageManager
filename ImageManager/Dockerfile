@@ -7,10 +7,11 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["ImageManager/ImageManager.csproj", "ImageManager/"]
+COPY ["ImageManager.csproj", "ImageManager/"]
 RUN dotnet restore "ImageManager/ImageManager.csproj"
-COPY . .
+
 WORKDIR "/src/ImageManager"
+COPY . .
 RUN dotnet build "./ImageManager.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish

@@ -1,4 +1,3 @@
-using System.Net.Mime;
 using ImageManager.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;

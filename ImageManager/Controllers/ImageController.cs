@@ -3,10 +3,8 @@ using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace ImageManager.Controllers;

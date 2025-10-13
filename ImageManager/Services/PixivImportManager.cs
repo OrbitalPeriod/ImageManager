@@ -1,4 +1,3 @@
-using CoenM.ImageHash.HashAlgorithms;
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using Microsoft.EntityFrameworkCore;
