@@ -1,6 +1,3 @@
-using System.Collections;
-using Microsoft.EntityFrameworkCore.Metadata;
-
 namespace ImageManager.Data.Models;
 
 public class Image

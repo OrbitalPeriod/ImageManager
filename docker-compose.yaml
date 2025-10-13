@@ -9,17 +9,23 @@
       - path: "./.env"
     profiles:
       - "tagger"
+    networks:
+      - network
   imagemanager:
     image: imagemanager
     build:
       context: ./ImageManager/
     profiles:
       - "backend"
+    ports:
+      - "8080:8080"
     depends_on:
-      - database
-      - AnimeTagger
+      database:
+        condition: service_healthy
     env_file:
       - path: "./.env"
+    networks:
+        - network
   database:
     image: 'postgres:latest'
     networks:
@@ -33,7 +39,20 @@
       - db-data:/var/lib/postgresql/data
     profiles:
       - "database"
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgresql"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+  frontend:
+    build:
+      context: ./Frontend/
+    networks:
+      - network
+    env_file:
+        - "./.env"
+    ports:
+      - "8081:80"
 networks:
   network:
     driver: bridge
