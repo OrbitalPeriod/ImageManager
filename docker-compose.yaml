@@ -53,6 +53,8 @@
         - "./.env"
     ports:
       - "8081:80"
+    profiles:
+      - "frontend"
 networks:
   network:
     driver: bridge

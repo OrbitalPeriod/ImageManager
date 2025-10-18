@@ -1,11 +1,32 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+// src/App.tsx
+import { useState, useEffect } from 'react';
+import reactLogo from './assets/react.svg';
+import viteLogo from '/vite.svg';
+import './App.css';
+
+import { fetchImages, type ImageQueryParams } from './services/apiClient';   // <-- import the client
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
 
+  /* ------------------------------------------------------------------ */
+  /* Demo: call the API once when the component mounts and log it      */
+  /* ------------------------------------------------------------------ */
+  useEffect(() => {
+    const params: ImageQueryParams = {
+      token: '3fa85f64-5717-4562-b3fc-2c963f66afa6', // replace with a real UUID
+      page: 0,
+      pageSize: 10,
+    };
+
+    fetchImages(params)
+      .then((data) => console.log('✅ Images API response:', data))
+      .catch((err) => console.error('❌ Failed to fetch images:', err));
+  }, []);   // empty deps → run only once
+
+  /* ------------------------------------------------------------------ */
+  /* Rest of the component (unchanged)                                 */
+  /* ------------------------------------------------------------------ */
   return (
     <>
       <div>
@@ -29,7 +50,7 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
