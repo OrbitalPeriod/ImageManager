@@ -1,15 +1,20 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using ImageManager.Repositories;
+
 namespace ImageManager.Data.Models;
 
-public class PlatformToken
+public class PlatformToken : IEntity<Guid>
 {
-    public int Id { get; set; }
-    public required string PlatformUserId { get; set; }
-    public DateTime? Expires { get; set; }
+    [Key]
+    public Guid Id { get; private set; }
+    public required string PlatformUserId { get; init; }
+    public DateTime? Expires { get; init; }
     public bool IsExpired => DateTime.UtcNow > Expires;
-    public required string Token { get; set; }
-    public Platform Platform { get; set; }
-    public bool CheckPrivate { get; set; } = false;
+    public required string Token { get; init; }
+    public Platform Platform { get; init; }
+    public bool CheckPrivate { get; init; } = false;
 
-    public string UserId { get; set; } = null!;
-    public User User { get; set; } = null!;
+    public required string UserId { get; init; }
+    public User User { get; private set; } = null!;
 }

@@ -1,13 +1,17 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using ImageManager.Repositories;
+
 namespace ImageManager.Data.Models;
 
-public class DownloadedImage
+public class DownloadedImage : IEntity<Guid>
 {
-    public int Id { get; set; }
+    [Key]
+    public Guid Id { get; private set; }
+    public required Platform Platform { get; init; }
+    public required int PlatformImageId { get; init; }
 
-    public required Platform Platform { get; set; }
-    public required int PlatformImageId { get; set; }
 
-
-    public Guid ImageId { get; set; }
-    public Image Image { get; set; } = null!;
+    public required Guid ImageId { get; init; }
+    public Image Image { get; private set; } = null!;
 }

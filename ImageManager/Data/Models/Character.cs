@@ -1,8 +1,13 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using ImageManager.Repositories;
+
 namespace ImageManager.Data.Models;
 
-public class Character
+public class Character : IEntity<Guid>
 {
-    public int Id { get; set; }
+    [Key]
+    public Guid Id { get; private set; }
     public required string Name { get; init; }
     public ICollection<Image> Images { get; init; } = [];
 }

@@ -1,27 +1,36 @@
-using ImageManager.Data.Models;
+#region Usings
+using System.Threading.Tasks;
+using ImageManager.Services.UserInfo;   
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+#endregion
 
 namespace ImageManager.Controllers;
 
+/// <summary>
+/// Provides endpoints for retrieving information about the currently authenticated user.
+/// </summary>
 [ApiController]
-[Route("/api/users")]
-public class UserController(UserManager<User> userManager) : Controller
+[Route("api/users")]
+public sealed class UserController(
+    IUserInfoService userInfoService) : ControllerBase
 {
-    public record GetUserInfoResponse(string Id, string? UserName, string? Email, Publicity DefaultPublicity);
+    #region Public Actions
+
+    /// <summary>
+    /// Returns basic profile data for the authenticated user.
+    /// </summary>
+    /// <returns>A <see cref="GetUserInfoResponse"/> containing user details.</returns>
     [Authorize]
     [HttpGet("me")]
     public async Task<ActionResult<GetUserInfoResponse>> GetUserInfo()
     {
-        var user = await userManager.GetUserAsync(HttpContext.User);
-        if (user == null)
-        {
-            return Unauthorized();
-        }
-
-        var response = new GetUserInfoResponse(user.Id, user.UserName, user.Email, user.DefaultPublicity);
+        var response = await userInfoService.GetCurrentUserInfoAsync(User);
+        
+        if (response is null) return Unauthorized();
 
         return Ok(response);
     }
+
+    #endregion
 }

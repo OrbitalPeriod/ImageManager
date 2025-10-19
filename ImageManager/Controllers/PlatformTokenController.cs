@@ -1,82 +1,79 @@
 using ImageManager.Data.Models;
 using ImageManager.Services;
+using ImageManager.Services.PlatformTokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ImageManager.Controllers;
 
+/// <summary>
+/// Handles CRUD operations for platform tokens belonging to the authenticated user.
+/// </summary>
 [ApiController]
-[Route("/api/platform-tokens")]
-public class PlatformTokenController(UserManager<User> userManager, IDatabaseService databaseService) : Controller
+[Route("api/platform-tokens")]
+public class PlatformTokenController(
+    UserManager<User>          userManager,
+    IPlatformTokenService      tokenService) : ControllerBase
 {
-    public record AddTokenRequest(string Token, string PlatFormUserId, DateTime? Expires, Platform Platform, bool CheckPrivate);
+    #region Add
+
+    /// <summary>
+    /// Adds a new platform token for the current user.
+    /// </summary>
     [Authorize]
     [HttpPut("add")]
     public async Task<IActionResult> AddToken([FromBody] AddTokenRequest request)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
+        if (user == null) return Unauthorized();
 
-        if (user == null)
-        {
-            return Unauthorized();
-        }
-
-        var platformToken = new PlatformToken
-        {
-            PlatformUserId = request.PlatFormUserId,
-            Expires = request.Expires,
-            Token = request.Token,
-            Platform = request.Platform,
-            CheckPrivate = request.CheckPrivate,
-            UserId = user.Id
-        };
-
-        await databaseService.SavePlatformToken(platformToken);
+        await tokenService.AddTokenAsync(request, user);
         return Ok();
     }
 
+    #endregion
+
+    #region Get
+
+    /// <summary>
+    /// Retrieves all platform tokens owned by the current user.
+    /// </summary>
     [Authorize]
     [HttpGet]
     public async Task<IActionResult> GetPlatformTokens()
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
-        if (user == null)
-        {
-            return Unauthorized();
-        }
+        if (user == null) return Unauthorized();
 
-        var tokens = await databaseService.UserPlatformTokens(user.Id).ToListAsync();
-
-        return Ok(tokens.Select(t => new
-        {
-            t.Id,
-            t.Platform,
-            t.PlatformUserId,
-            t.Expires,
-            t.IsExpired,
-            t.CheckPrivate
-        }));
+        var tokens = await tokenService.GetTokensAsync(user);
+        return Ok(tokens);
     }
 
+    #endregion
+
+    #region Delete
+
+    /// <summary>
+    /// Deletes a platform token by its GUID.
+    /// </summary>
     [Authorize]
-    [HttpDelete("delete/{id:int}")]
-    public async Task<IActionResult> DeletePlatformToken(int id)
+    [HttpDelete("delete/{id:Guid}")]
+    public async Task<IActionResult> DeletePlatformToken(Guid id)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
-        if (user == null)
-        {
-            return Unauthorized();
-        }
+        if (user == null) return Unauthorized();
 
-        var token = await databaseService.FindPlatformToken(id);
-        if (token == null || token.UserId != user.Id)
-        {
-            return NotFound();
-        }
+        var result = await tokenService.DeleteTokenAsync(id, user);
 
-        await databaseService.DeletePlatformToken(token.Id);
-        return Ok();
+        return result switch
+        {
+            DeleteResult.NotFound => NotFound(),
+            DeleteResult.Forbidden => Forbid(),
+            DeleteResult.Deleted  => Ok(),
+            _ => BadRequest()
+        };
     }
+
+    #endregion
 }

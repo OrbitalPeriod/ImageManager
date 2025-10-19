@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251005143701_Pain1")]
-    partial class Pain1
+    [Migration("20251019133741_Killing myself part 5")]
+    partial class Killingmyselfpart5
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -28,8 +28,8 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("CharacterImage", b =>
                 {
-                    b.Property<int>("CharactersId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CharactersId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("ImagesId")
                         .HasColumnType("uuid");
@@ -43,11 +43,10 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.Character", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -60,11 +59,10 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<Guid>("ImageId")
                         .HasColumnType("uuid");
@@ -80,6 +78,9 @@ namespace ImageManager.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ImageId")
+                        .IsUnique();
+
                     b.HasIndex("UserId");
 
                     b.ToTable("DownloadedImages", "identity");
@@ -89,12 +90,13 @@ namespace ImageManager.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<int>("AgeRating")
                         .HasColumnType("integer");
 
-                    b.Property<int>("DownloadedImageId")
+                    b.Property<int?>("DownloadedImageId")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Hash")
@@ -102,19 +104,15 @@ namespace ImageManager.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DownloadedImageId")
-                        .IsUnique();
-
                     b.ToTable("Images", "identity");
                 });
 
             modelBuilder.Entity("ImageManager.Data.Models.PlatformToken", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<bool>("CheckPrivate")
                         .HasColumnType("boolean");
@@ -148,7 +146,8 @@ namespace ImageManager.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
@@ -174,11 +173,10 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.Tag", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -260,10 +258,8 @@ namespace ImageManager.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("DownloadedImageId")
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<Guid>("ImageId")
                         .HasColumnType("uuid");
@@ -277,8 +273,6 @@ namespace ImageManager.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DownloadedImageId");
-
                     b.HasIndex("ImageId");
 
                     b.HasIndex("UserId");
@@ -291,8 +285,8 @@ namespace ImageManager.Migrations
                     b.Property<Guid>("ImageId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("TagsId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TagsId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("ImageId", "TagsId");
 
@@ -450,20 +444,15 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
                 {
+                    b.HasOne("ImageManager.Data.Models.Image", "Image")
+                        .WithOne("DownloadedImage")
+                        .HasForeignKey("ImageManager.Data.Models.DownloadedImage", "ImageId");
+
                     b.HasOne("ImageManager.Data.Models.User", null)
                         .WithMany("DownloadedImages")
                         .HasForeignKey("UserId");
-                });
 
-            modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
-                {
-                    b.HasOne("ImageManager.Data.Models.DownloadedImage", "DownloadedImage")
-                        .WithOne("Image")
-                        .HasForeignKey("ImageManager.Data.Models.Image", "DownloadedImageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("DownloadedImage");
+                    b.Navigation("Image");
                 });
 
             modelBuilder.Entity("ImageManager.Data.Models.PlatformToken", b =>
@@ -498,12 +487,6 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.UserOwnedImage", b =>
                 {
-                    b.HasOne("ImageManager.Data.Models.DownloadedImage", "DownloadedImage")
-                        .WithMany()
-                        .HasForeignKey("DownloadedImageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("ImageManager.Data.Models.Image", "Image")
                         .WithMany("UserOwnedImages")
                         .HasForeignKey("ImageId")
@@ -515,8 +498,6 @@ namespace ImageManager.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("DownloadedImage");
 
                     b.Navigation("Image");
 
@@ -589,13 +570,10 @@ namespace ImageManager.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
-                {
-                    b.Navigation("Image");
-                });
-
             modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
                 {
+                    b.Navigation("DownloadedImage");
+
                     b.Navigation("UserOwnedImages");
                 });
 

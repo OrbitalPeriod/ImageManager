@@ -1,43 +1,61 @@
-using ImageManager.Data;
-using ImageManager.Data.Models;
-using ImageManager.Services;
+#region Usings
+using ImageManager.Data.Models;          
+using ImageManager.Services.ShareToken;  
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+#endregion
 
 namespace ImageManager.Controllers;
 
+/// <summary>
+/// Exposes API endpoints that allow an authenticated user to generate a
+/// platform‑token for a specific image.
+/// </summary>
 [ApiController]
-public class ShareToken(UserManager<User> userManager, IDatabaseService databaseService, ApplicationDbContext dbContext) : Controller
+[Route("api/[controller]")]
+public sealed class ShareTokenController(
+    UserManager<User> userManager,
+    IShareTokenService tokenService) : ControllerBase
 {
-    public record AddPlatformTokenRequest(DateTime? Expiration);
+    #region Public Actions
+    /// <summary>
+    /// Creates a new platform‑token for the image identified by <paramref name="imageId"/>.
+    /// </summary>
+    /// <param name="imageId">The GUID of the target image.</param>
+    /// <param name="request">
+    /// Request body containing the desired token expiration date/time.
+    /// </param>
+    /// <returns>
+    /// 200 OK with the new token’s GUID on success;  
+    /// 401 Unauthorized if the caller isn’t authenticated;  
+    /// 404 Not Found if the image does not exist. 
+    /// </returns>
     [Authorize]
     [HttpPost("add/{imageId:guid}")]
-    public async Task<IActionResult> AddPlatformToken(Guid imageId, [FromBody] AddPlatformTokenRequest request)
+    public async Task<IActionResult> AddPlatformToken(
+        Guid imageId,
+        [FromBody] AddPlatformTokenRequest request)
     {
-        var user = await userManager.GetUserAsync(HttpContext.User);
-        if (user == null)
+        var user = await userManager.GetUserAsync(User);
+        if (user is null) return Unauthorized();
+        
+        Guid? tokenId;
+        try
         {
-            return Unauthorized();
+            tokenId = await tokenService.AddPlatformTokenAsync(
+                imageId,
+                request.Expiration,
+                user);
         }
-
-        var userOwnedImage = await dbContext.UserOwnedImages.Where(i => i.ImageId == imageId && i.UserId == user.Id).FirstOrDefaultAsync();
-        if (userOwnedImage == null)
+        catch (Exception ex)
         {
-            return NotFound();
+            return StatusCode(500, $"Internal error: {ex.Message}");
         }
+        
+        if (!tokenId.HasValue) return NotFound();
 
-        var shareToken = new Data.Models.ShareToken()
-        {
-            Created = DateTime.UtcNow,
-            Expires = request.Expiration ?? DateTime.UtcNow + TimeSpan.FromDays(3),
-            UserOwnedImageId = userOwnedImage.Id,
-            Id = Guid.NewGuid(),
-            UserId = user.Id
-        };
-
-        await databaseService.SaveShareToken(shareToken);
-        return Ok(shareToken.Id);
+        return Ok(tokenId.Value);
     }
+    #endregion
 }
