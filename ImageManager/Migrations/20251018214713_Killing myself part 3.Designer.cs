@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251005144332_Pain123")]
-    partial class Pain123
+    [Migration("20251018214713_Killing myself part 3")]
+    partial class Killingmyselfpart3
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -28,8 +28,8 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("CharacterImage", b =>
                 {
-                    b.Property<int>("CharactersId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("CharactersId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("ImagesId")
                         .HasColumnType("uuid");
@@ -43,11 +43,10 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.Character", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -60,11 +59,10 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<Guid>("ImageId")
                         .HasColumnType("uuid");
@@ -92,12 +90,13 @@ namespace ImageManager.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<int>("AgeRating")
                         .HasColumnType("integer");
 
-                    b.Property<int>("DownloadedImageId")
+                    b.Property<int?>("DownloadedImageId")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("Hash")
@@ -110,11 +109,10 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.PlatformToken", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<bool>("CheckPrivate")
                         .HasColumnType("boolean");
@@ -148,7 +146,8 @@ namespace ImageManager.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("timestamp with time zone");
@@ -174,11 +173,10 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.Tag", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -260,7 +258,8 @@ namespace ImageManager.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<Guid>("ImageId")
                         .HasColumnType("uuid");
@@ -286,8 +285,8 @@ namespace ImageManager.Migrations
                     b.Property<Guid>("ImageId")
                         .HasColumnType("uuid");
 
-                    b.Property<int>("TagsId")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("TagsId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("ImageId", "TagsId");
 

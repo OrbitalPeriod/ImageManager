@@ -1,15 +1,20 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using ImageManager.Repositories;
+
 namespace ImageManager.Data.Models;
 
-public class ShareToken
+public class ShareToken : IEntity<Guid>
 {
-    public Guid Id { get; set; }
-    public User User { get; set; } = null!;
-    public string UserId { get; set; } = null!;
+    [Key]
+    public Guid Id { get; private set; }
+    public required string UserId { get; init; } = null!;
+    public User User { get; private set; } = null!;
 
-    public Guid UserOwnedImageId { get; set; }
-    public UserOwnedImage UserOwnedImage { get; set; } = null!;
+    public required Guid UserOwnedImageId { get; init; }
+    public UserOwnedImage UserOwnedImage { get; private set; } = null!;
 
-    public DateTime Created { get; set; }
-    public DateTime Expires { get; set; }
+    public DateTime Created { get; init; }
+    public DateTime Expires { get; init; }
     public bool IsExpired => DateTime.UtcNow > Expires;
 }

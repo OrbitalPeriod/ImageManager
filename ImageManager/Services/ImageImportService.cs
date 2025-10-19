@@ -1,23 +1,65 @@
+#region Usings
+using System;
+using System.IO;
+using System.Threading.Tasks;
 using CoenM.ImageHash.HashAlgorithms;
-using ImageManager.Data;
 using ImageManager.Data.Models;
+using ImageManager.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp.PixelFormats;
+#endregion
 
 namespace ImageManager.Services;
 
+/// <summary>
+/// Service that imports an image, tags it and records ownership/download status.
+/// </summary>
 public interface IImageImportService
 {
-    public Task<Guid?> ImportImage(byte[] imageBytes, Publicity publicity, IDbContextTransaction transaction, string userId);
+    /// <summary>
+    /// Imports the given image bytes, generates tags, calculates a hash,
+    /// stores the file (if new), creates or re‑uses an <see cref="Image"/> entity,
+    /// and ensures that the specified user owns the image.
+    /// </summary>
+    /// <param name="imageBytes">Raw PNG/JPEG/GIF data.</param>
+    /// <param name="publicity">The default publicity level for the new image.</param>
+    /// <param name="userId">Identifier of the user performing the import.</param>
+    /// <returns>The GUID of the resulting <see cref="Image"/> or <c>null</c> if the import failed.</returns>
+    Task<Guid?> ImportImage(byte[] imageBytes, Publicity publicity, string userId);
 }
 
-public class ImageImportService(ITaggerService taggerService, IFileService fileService, ApplicationDbContext dbContext, ILogger<ImageImportService> logger, IDatabaseService databaseService) : IImageImportService
+#region Implementation
+
+/// <summary>
+/// EF Core‑based implementation of <see cref="IImageImportService"/>.
+/// </summary>
+public class ImageImportService(
+    ITaggerService taggerService,
+    IFileService fileService,
+    IImageRepository imageRepository,
+    IUserOwnedImageRepository userOwnedImageRepository,
+    IDownloadedImageRepository downloadedImageRepository, // currently unused but kept for future extensions
+    ITagRepository tagRepository,
+    ICharacterRepository characterRepository,
+    ILogger<ImageImportService> logger) : IImageImportService
 {
     private readonly AverageHash _hash = new AverageHash();
 
-    public async Task<Guid?> ImportImage(byte[] imageBytes, Publicity publicity, IDbContextTransaction transaction, string userId)
+    public async Task<Guid?> ImportImage(byte[] imageBytes, Publicity publicity, string userId)
     {
+        // --------------------------------------------------------------------
+        // 0️⃣  Validate inputs
+        // --------------------------------------------------------------------
+        if (imageBytes == null || imageBytes.Length == 0)
+            throw new ArgumentException("Image data cannot be empty.", nameof(imageBytes));
+
+        if (string.IsNullOrWhiteSpace(userId))
+            throw new ArgumentException("User ID must be supplied.", nameof(userId));
+
+        // --------------------------------------------------------------------
+        // 1️⃣  Get tags from the external tagging service
+        // --------------------------------------------------------------------
         ImageResponse imageData;
         try
         {
@@ -25,55 +67,85 @@ public class ImageImportService(ITaggerService taggerService, IFileService fileS
         }
         catch (Exception e)
         {
-            logger.LogError($"Failed to get tags due to {e.Message}");
-            return null;
+            logger.LogError(e, "Failed to get tags for import");
+            return null;          // cannot continue without tags
         }
 
-        var tagEntities = await databaseService.GetTags(imageData.GeneralTags);
-        var characterEntities = await databaseService.GetCharacters(imageData.CharacterTags);
+        // --------------------------------------------------------------------
+        // 2️⃣  Resolve Tag & Character entities from the repositories
+        // --------------------------------------------------------------------
+        var tagEntities       = await tagRepository.GetByStringsAsync(imageData.GeneralTags);
+        var characterEntities = await characterRepository.GetByNamesAsync(imageData.CharacterTags);
 
-        Guid userOwnedImageGuid;
+        // --------------------------------------------------------------------
+        // 3️⃣  Compute an average‑hash for the image
+        // --------------------------------------------------------------------
+        using var ms = new MemoryStream(imageBytes);
+        using var img = await SixLabors.ImageSharp.Image.LoadAsync<Rgba32>(ms);
+        ulong hash = _hash.Hash(img.Clone());
+
+        // --------------------------------------------------------------------
+        // 4️⃣  Look for an existing image by hash via the repository
+        // --------------------------------------------------------------------
+        var existingImage = await imageRepository.GetByHashAsync(hash);
+
         Guid imageGuid;
 
-        using var image = await SixLabors.ImageSharp.Image.LoadAsync<Rgba32>(new MemoryStream(imageBytes));
-        ulong hash = _hash.Hash(image.Clone());
+        if (existingImage != null)
+        {
+            // Existing image – use its Id
+            imageGuid = existingImage.Id;
 
-        var existingImage = await dbContext.Images.Include(i => i.UserOwnedImages).FirstOrDefaultAsync(i => i.Hash == hash);
-        if (existingImage != null && existingImage.UserOwnedImages.Any(uoi => uoi.UserId == userId))
-        {
-            logger.LogInformation("Image already exists and owned in database, skipping");
-            return null;
-        }
-        else if (existingImage == null)
-        {
-            userOwnedImageGuid = await fileService.SaveFile(image);
-            existingImage = new Image()
+            // ---- Ensure the user is listed as an owner ---------------------------------
+            bool hasOwnership =
+                await userOwnedImageRepository.AccessibleImages(new User { Id = userId }, null)
+                                              .AnyAsync(i => i.ImageId == imageGuid);
+
+            if (!hasOwnership)
             {
-                AgeRating = (AgeRating)imageData.Rating,
-                Characters = characterEntities,
-                Hash = hash,
-                Id = userOwnedImageGuid,
-                Tags = tagEntities
-            };
-            await dbContext.Images.AddAsync(existingImage);
-            await dbContext.SaveChangesAsync();
+                await userOwnedImageRepository.AddAsync(
+                    new UserOwnedImage { ImageId = imageGuid, UserId = userId });
+            }
         }
         else
         {
-            userOwnedImageGuid = Guid.NewGuid();
+            // ------------------------------------------------------------------------
+            // 5️⃣  New image – first persist the file to obtain a Guid
+            // ------------------------------------------------------------------------
+            try
+            {
+                imageGuid = await fileService.SaveFile(img);   // returns the new image Guid
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Failed to store image file");
+                return null;
+            }
+
+            // ------------------------------------------------------------------------
+            // 6️⃣  Build a brand‑new Image entity and add it via the repository
+            // ------------------------------------------------------------------------
+            var newImage = new Image
+            {
+                Id = imageGuid,
+                Hash = hash,
+                Tags = tagEntities.ToList(),
+                Characters = characterEntities.ToList(),
+                AgeRating = (AgeRating)imageData.Rating,
+                DownloadedImageId = null,
+            };
+
+            await imageRepository.AddAsync(newImage);
+
+            // ------------------------------------------------------------------------
+            // 7️⃣  Add ownership record for the user
+            // ------------------------------------------------------------------------
+            await userOwnedImageRepository.AddAsync(
+                new UserOwnedImage { ImageId = imageGuid, UserId = userId });
         }
 
-        var userOwnedImage = new UserOwnedImage()
-        {
-            Image = existingImage,
-            Id = userOwnedImageGuid,
-            Publicity = publicity,
-            UserId = userId,
-        };
-
-        await dbContext.UserOwnedImages.AddAsync(userOwnedImage);
-        await dbContext.SaveChangesAsync();
-
-        return existingImage.Id;
+        return imageGuid;
     }
 }
+
+#endregion

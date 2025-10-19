@@ -28,5 +28,20 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<User>().HasMany(e => e.Images).WithOne(e => e.User);
         builder.Entity<User>().HasMany(e => e.ShareTokens).WithOne(e => e.User).HasForeignKey(st => st.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<User>().HasMany(e => e.PlatformTokens).WithOne(e => e.User);
+        
+        builder.Entity<Character>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Entity<Character>().HasKey(i => i.Id);
+        builder.Entity<DownloadedImage>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Entity<DownloadedImage>().HasKey(i => i.Id);
+        builder.Entity<Image>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Entity<Image>().HasKey(i => i.Id);
+        builder.Entity<PlatformToken>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Entity<PlatformToken>().HasKey(i => i.Id);
+        builder.Entity<ShareToken>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Entity<ShareToken>().HasKey(i => i.Id);
+        builder.Entity<Tag>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Entity<Tag>().HasKey(i => i.Id);
+        builder.Entity<UserOwnedImage>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Entity<UserOwnedImage>().HasKey(i => i.Id);
     }
 }

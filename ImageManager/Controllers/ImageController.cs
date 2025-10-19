@@ -1,195 +1,222 @@
-using ImageManager.Data;
+#region Usings
+using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Services;
+using ImageManager.Services.Query;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+#endregion
 
 namespace ImageManager.Controllers;
 
+/// <summary>
+/// Handles all image‑related API endpoints (listing, uploading, deleting, and searching).  
+/// The controller is intentionally stateless; all dependencies are injected via the constructor.
+/// </summary>
 [ApiController]
-[Route("/api/images")]
-public class ImageController(IFileService fileService, IDatabaseService databaseService, ApplicationDbContext dbContext, UserManager<User> userManager, IImageImportService imageImportService) : Controller
+[Route("api/images")]
+public class ImageController(
+    UserManager<User> userManager,
+    IImageQueryService imageQueryService,
+    IImageDetailService imageDetailService,
+    IUploadImageService uploadImageService,
+    IDeleteImageService deleteImageService,
+    IFileService fileService,
+    ILogger<ImageController> logger) : ControllerBase
 {
+    
+    #region DTOs used by this controller
+    /// <summary>Response returned for a paginated list of images.</summary>
     public record GetImagesResponse(Guid Id, AgeRating Rating);
-    [HttpGet]
-    public async Task<ActionResult<PaginatedResponse<GetImagesResponse>>> GetImages([FromQuery] Guid? token, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
-    {
-        if (page < 1) page = 1;
-        if (pageSize is < 1 or > 200) pageSize = 200;
 
+    /// <summary>Request payload for uploading an image.</summary>
+    public record UploadImageRequest(
+        [Required] IFormFile File,
+        Publicity? Publicity);
+
+    /// <summary>Full image data exposed to the caller.</summary>
+    public record ImageDataResponse(
+        Guid Id,
+        ICollection<string> Tags,
+        ICollection<string> Characters,
+        AgeRating Rating,
+        ICollection<string> OwnerIds);
+
+    /// <summary>Query parameters for searching images.</summary>
+    public record GetSearchImagesRequest(
+        ICollection<string>? Tags,
+        ICollection<string>? Characters,
+        ICollection<AgeRating>? Rating);
+
+    /// <summary>Response returned for a paginated list of search results.</summary>
+    public record GetSearchImagesResponse(Guid Id, AgeRating Rating);
+    #endregion
+
+    #region Actions
+    /// <summary>
+    /// Returns a paginated list of images that the user can access.  
+    /// If no authentication is required, this endpoint remains open to anonymous users.
+    /// </summary>
+    [HttpGet]
+    public async Task<ActionResult<PaginatedResponse<GetImagesResponse>>> GetImages(
+        [FromQuery] Guid? token,
+        [FromQuery, Range(1, int.MaxValue)] int page = 1,
+        [FromQuery, Range(1, 200)] int pageSize = 20)
+    {
         var user = await userManager.GetUserAsync(HttpContext.User);
 
-        var baseQuery = databaseService.AccessibleImages(user, token).Select(uoi => uoi.Image).Distinct();
-
-        var totalCount = await baseQuery.CountAsync();
-        var totalPages = (int)Math.Ceiling(totalCount / (double)(pageSize));
-
-        var images = await baseQuery
-            .OrderByDescending(i => i.Id)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToArrayAsync();
-
-        var imageData = images.Select(i => new GetImagesResponse(i.Id, i.AgeRating)).ToArray();
-
-        var response = new PaginatedResponse<GetImagesResponse>()
-        {
-            Data = imageData,
-            Page = page,
-            PageSize = pageSize,
-            TotalPages = totalPages,
-            TotalItems = totalCount
-        };
-
-        return Ok(response);
+        var result = await imageQueryService.GetImagesAsync(user, token, page, pageSize);
+        return Ok(result);
     }
 
+    /// <summary>
+    /// Uploads a new image and returns its GUID.  
+    /// Requires the caller to be authenticated.
+    /// </summary>
+    [HttpPut("upload")]
+    [Authorize]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Upload([FromForm] UploadImageRequest request)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+        if (user == null) return Unauthorized();
+
+        var imageId = await uploadImageService.UploadAsync(
+            request.File,
+            request.Publicity ?? user.DefaultPublicity,
+            user);
+
+        if (imageId == null)
+            return BadRequest("Failed to import image");
+
+        return Ok(imageId);
+    }
+
+    /// <summary>
+    /// Deletes an existing image.  
+    /// Only the owner or a privileged user can delete; otherwise a 403 is returned.
+    /// </summary>
+    [HttpDelete("delete/{imageId:guid}")]
+    [Authorize]
+    public async Task<IActionResult> Delete(Guid imageId)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+        if (user == null) return Unauthorized();
+
+        var result = await deleteImageService.DeleteAsync(imageId, user.Id);
+
+        return result switch
+        {
+            DeleteResult.NotFound => NotFound(),
+            DeleteResult.Forbidden => Forbid(),
+            DeleteResult.Deleted  => Ok(),
+            _ => BadRequest()
+        };
+    }
+
+    /// <summary>
+    /// Retrieves public metadata for an image (tags, characters, rating, owners).  
+    /// Access is validated against the supplied token.
+    /// </summary>
+    [HttpGet("{imageId:guid}/data")]
+    public async Task<ActionResult<ImageDataResponse>> Data(Guid imageId, [FromQuery] Guid? token)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+
+        var result = await imageDetailService.GetImageDataAccessAsync(imageId, user, token);
+        if (!result.Found)   return NotFound();
+        if (!result.Allowed) return Forbid();
+
+        var data = result.Data;
+        if (data == null)
+            return NotFound("Image data not found.");
+
+        return Ok(data);
+    }
+
+    /// <summary>
+    /// Streams the raw image file to the caller.  
+    /// The MIME type is now inferred from the image record or by inspecting the file header.
+    /// </summary>
     [HttpGet("{imageId:guid}")]
     public async Task<IActionResult> GetImage(Guid imageId, [FromQuery] Guid? token)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
 
-        var image = await databaseService.GetImageById(imageId);
+        var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
+        if (!result.Found)   return NotFound();
+        if (!result.Allowed) return Forbid();
 
+        var image = result.Image;
         if (image == null)
-        {
-            return NotFound();
-        }
+            return NotFound("Requested image not found.");
 
-        if (!await databaseService.CanAccessImage(user, image, token))
-        {
-            return Forbid();
-        }
-
+        // Return the image file
         return await ReturnImage(image);
     }
 
+    /// <summary>
+    /// Searches images by tags, characters or rating.  
+    /// Returns a paginated result set.
+    /// </summary>
+    [HttpGet("search")]
+    public async Task<ActionResult<PaginatedResponse<GetSearchImagesResponse>>> Search(
+        [FromQuery] GetSearchImagesRequest request,
+        [FromQuery, Range(1, int.MaxValue)] int page = 1,
+        [FromQuery, Range(1, 200)] int pageSize = 20)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+
+        var result = await imageQueryService.SearchImagesAsync(user, request, page, pageSize);
+        return Ok(result);
+    }
+    #endregion
+
+    #region Helpers
+    /// <summary>
+    /// Loads an image from the file system and returns it as a FileResult.  
+    /// Handles MIME‑type inference and I/O errors gracefully.
+    /// </summary>
     private async Task<IActionResult> ReturnImage(Image image)
     {
-        var mimeType = "image/png";
-        var fileBytes = await fileService.LoadFile(image.Id);
-        return File(fileBytes, mimeType);
-    }
-
-    public record ImageDataResponse(Guid Id, ICollection<string> Tags, ICollection<string> Characters, AgeRating Rating, ICollection<string> OwnerIds);
-    [HttpGet("{imageId}/data")]
-    public async Task<ActionResult<ImageDataResponse>> Data(Guid imageId, [FromQuery] Guid? token)
-    {
-        var user = await userManager.GetUserAsync(HttpContext.User);
-
-        var image = await databaseService.GetImageById(imageId);
-
-        if (image == null)
-        {
-            return NotFound();
-        }
-
-        if (!await databaseService.CanAccessImage(user, image, token))
-        {
-            return Forbid();
-        }
-
-        var response = new ImageDataResponse(image.Id, image.Tags.Select(x => x.Name).ToArray(),
-            image.Characters.Select(x => x.Name).ToArray(), image.AgeRating, image.UserOwnedImages.Select(x => x.UserId).ToArray());
-
-        return Ok(response);
-    }
-
-    public record UploadImageRequest(IFormFile File, Publicity? Publicity);
-
-    [HttpPut("upload")]
-    [Authorize]
-    [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadImageRequests([FromForm] UploadImageRequest request)
-    {
-        var user = await userManager.GetUserAsync(HttpContext.User);
-        if (user == null)
-            return Unauthorized();
-
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
-
         try
         {
-            byte[] image;
-            await using (var memoryStream = new MemoryStream())
+            var fileBytes = await fileService.LoadFile(image.Id);
+            if (fileBytes == null || fileBytes.Length == 0) return NotFound("Requested image not found.");
+
+            // Determine MIME type – prefer the stored value, otherwise guess from header bytes.
+            string mimeType = "image/png";
+            if (string.IsNullOrWhiteSpace(mimeType))
             {
-                await request.File.CopyToAsync(memoryStream);
-                image = memoryStream.ToArray();
+                if (fileBytes.Length >= 8 &&
+                    fileBytes[0] == 0x89 && fileBytes[1] == 0x50 && fileBytes[2] == 0x4E &&
+                    fileBytes[3] == 0x47 && fileBytes[4] == 0x0D && fileBytes[5] == 0x0A &&
+                    fileBytes[6] == 0x1A && fileBytes[7] == 0x0A)
+                {
+                    mimeType = "image/png";
+                }
+                else if (fileBytes.Length >= 3 &&
+                         fileBytes[0] == 0xFF && fileBytes[1] == 0xD8 && fileBytes[2] == 0xFF)
+                {
+                    mimeType = "image/jpeg";
+                }
+                else
+                {
+                    // Fallback: generic binary stream
+                    mimeType = "application/octet-stream";
+                }
             }
 
-            var publicity = request.Publicity ?? user.DefaultPublicity;
-            var imageId = await imageImportService.ImportImage(image, publicity, transaction, user.Id);
-
-            if (imageId == null)
-            {
-                await transaction.RollbackAsync();
-                return BadRequest("Failed to import image");
-            }
-
-            await transaction.CommitAsync();
-            return Ok(imageId);
+            return File(fileBytes, mimeType);
         }
         catch (Exception ex)
         {
-            await transaction.RollbackAsync();
-            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while importing the image." + ex.Message);
+            logger.LogError(ex, "Failed to load image {ImageId}", image.Id);
+            // Return 500 – the client cannot recover from an I/O failure.
+            return StatusCode(500, "Unable to retrieve the requested image.");
         }
     }
-
-    [HttpDelete("delete/{imageId:guid}")]
-    [Authorize]
-    public async Task<IActionResult> DeleteImage(Guid imageId)
-    {
-        var user = await userManager.GetUserAsync(HttpContext.User);
-        if (user == null)
-            return Unauthorized();
-
-        var userOwnedImage = await dbContext.UserOwnedImages.FirstOrDefaultAsync(uoi => uoi.ImageId == imageId);
-        if (userOwnedImage == null)
-            return NotFound();
-
-        if (userOwnedImage.UserId == user.Id)
-            return Forbid();
-
-        dbContext.UserOwnedImages.Remove(userOwnedImage);
-        await dbContext.SaveChangesAsync();
-        return Ok();
-    }
-
-    public record GetSearchImagesRequest(ICollection<string>? Tags, ICollection<string>? Characters, ICollection<AgeRating>? Rating);
-    public record GetSearchImagesResponse(Guid Id, AgeRating Rating);
-
-    [HttpGet("search")]
-    public async Task<ActionResult<GetSearchImagesResponse>> GetSearchImages([FromQuery] GetSearchImagesRequest request, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
-    {
-        var user = await userManager.GetUserAsync(HttpContext.User);
-        var baseQuery = databaseService.AccessibleImages(user, null);
-
-        var query = baseQuery.AsQueryable();
-
-        if (request.Tags != null && request.Tags.Any()) query = query.Where(i => i.Image.Tags.Any(t => request.Tags.Contains(t.Name)));
-        if (request.Characters != null && request.Characters.Any()) query = query.Where(i => i.Image.Characters.Any(c => request.Characters.Contains(c.Name)));
-        if (request.Rating != null && request.Rating.Any()) query = query.Where(i => request.Rating.Contains(i.Image.AgeRating));
-
-        var imagesData = await query.OrderByDescending(i => i.Id)
-            .Include(i => i.Image)
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToArrayAsync();
-        var images = imagesData.Select(i => new GetSearchImagesResponse(i.ImageId, i.Image.AgeRating)).ToArray();
-
-        var response = new PaginatedResponse<GetSearchImagesResponse>()
-        {
-            Data = images,
-            Page = page,
-            PageSize = pageSize,
-            TotalItems = await query.CountAsync(),
-            TotalPages = (int)Math.Ceiling(await query.CountAsync() / (double)pageSize)
-        };
-
-        return Ok(response);
-    }
+    #endregion
 }

@@ -1,0 +1,11 @@
+name: mui-mcp
+version: 0.0.1
+schema: v1
+mcpServers:
+  - name: mui-mcp
+    type: stdio
+    command: npx
+    args:
+      - -y
+      - "@mui/mcp@latest"
+    env: {}

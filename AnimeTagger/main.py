@@ -50,7 +50,11 @@ class AnimeTagger(AnimeTagger_pb2_grpc.AnimeTaggerServicer):
 
 
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    MAX_MSG_SIZE = 124 * 1024 * 1024   # 64 MiB
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), options=[
+        ('grpc.max_send_message_length', MAX_MSG_SIZE),     # what the server can send
+        ('grpc.max_receive_message_length', MAX_MSG_SIZE),  # **what the server can receive**
+    ])
     AnimeTagger_pb2_grpc.add_AnimeTaggerServicer_to_server(AnimeTagger(), server)
 
     health_servicer = health.HealthServicer()
