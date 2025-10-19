@@ -1,16 +1,21 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using ImageManager.Repositories;
+
 namespace ImageManager.Data.Models;
 
-public class Image
+public class Image : IEntity<Guid>
 {
-    public Guid Id { get; set; }
-    public ulong Hash { get; set; }
-    public AgeRating AgeRating { get; set; }
+    [Key]
+    public Guid Id { get; init; }
+    public required ulong Hash { get; init; }
+    public required AgeRating AgeRating { get; init; }
 
-    public ICollection<UserOwnedImage> UserOwnedImages { get; set; } = [];
+    public ICollection<UserOwnedImage> UserOwnedImages { get; init; } = [];
 
     public ICollection<Tag> Tags { get; set; } = [];
-    public ICollection<Character> Characters { get; set; } = [];
+    public ICollection<Character> Characters { get; init; } = [];
 
-    public DownloadedImage? DownloadedImage { get; set; }
-    public int DownloadedImageId { get; set; }
+    public required int? DownloadedImageId { get; init; }
+    public DownloadedImage? DownloadedImage { get; private set; }
 }

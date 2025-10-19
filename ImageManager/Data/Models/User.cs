@@ -1,8 +1,9 @@
+using ImageManager.Repositories;
 using Microsoft.AspNetCore.Identity;
 
 namespace ImageManager.Data.Models;
 
-public class User : IdentityUser
+public class User : IdentityUser, IEntity<string>
 {
     public Publicity DefaultPublicity { get; set; } = Publicity.Open;
 

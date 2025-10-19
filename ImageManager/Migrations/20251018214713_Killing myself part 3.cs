@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     /// <inheritdoc />
-    public partial class AddUniqueContraint : Migration
+    public partial class Killingmyselfpart3 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -62,8 +62,7 @@ namespace ImageManager.Migrations
                 schema: "identity",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Name = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
@@ -72,12 +71,26 @@ namespace ImageManager.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Images",
+                schema: "identity",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    Hash = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
+                    AgeRating = table.Column<int>(type: "integer", nullable: false),
+                    DownloadedImageId = table.Column<int>(type: "integer", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Images", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Tags",
                 schema: "identity",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Name = table.Column<string>(type: "text", nullable: false)
                 },
                 constraints: table =>
@@ -203,36 +216,11 @@ namespace ImageManager.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Images",
-                schema: "identity",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Hash = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
-                    AgeRating = table.Column<int>(type: "integer", nullable: false),
-                    Publicity = table.Column<int>(type: "integer", nullable: false),
-                    DownloadedImageId = table.Column<int>(type: "integer", nullable: false),
-                    UserId = table.Column<string>(type: "text", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Images", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Images_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalSchema: "identity",
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "PlatformTokens",
                 schema: "identity",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     PlatformUserId = table.Column<string>(type: "text", nullable: false),
                     Expires = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     Token = table.Column<string>(type: "text", nullable: false),
@@ -257,7 +245,7 @@ namespace ImageManager.Migrations
                 schema: "identity",
                 columns: table => new
                 {
-                    CharactersId = table.Column<int>(type: "integer", nullable: false),
+                    CharactersId = table.Column<Guid>(type: "uuid", nullable: false),
                     ImagesId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
@@ -284,23 +272,21 @@ namespace ImageManager.Migrations
                 schema: "identity",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
-                    UserId1 = table.Column<string>(type: "text", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Platform = table.Column<int>(type: "integer", nullable: false),
-                    ImageId = table.Column<Guid>(type: "uuid", nullable: true)
+                    PlatformImageId = table.Column<int>(type: "integer", nullable: false),
+                    ImageId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_DownloadedImages", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_DownloadedImages_AspNetUsers_UserId1",
-                        column: x => x.UserId1,
+                        name: "FK_DownloadedImages_AspNetUsers_UserId",
+                        column: x => x.UserId,
                         principalSchema: "identity",
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_DownloadedImages_Images_ImageId",
                         column: x => x.ImageId,
@@ -310,12 +296,41 @@ namespace ImageManager.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "UserOwnedImages",
+                schema: "identity",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    Publicity = table.Column<int>(type: "integer", nullable: false),
+                    ImageId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserOwnedImages", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_UserOwnedImages_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "identity",
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserOwnedImages_Images_ImageId",
+                        column: x => x.ImageId,
+                        principalSchema: "identity",
+                        principalTable: "Images",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ImageTag",
                 schema: "identity",
                 columns: table => new
                 {
                     ImageId = table.Column<Guid>(type: "uuid", nullable: false),
-                    TagsId = table.Column<int>(type: "integer", nullable: false)
+                    TagsId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -341,12 +356,11 @@ namespace ImageManager.Migrations
                 schema: "identity",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     UserId = table.Column<string>(type: "text", nullable: false),
-                    ImageId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserOwnedImageId = table.Column<Guid>(type: "uuid", nullable: false),
                     Created = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Expires = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Token = table.Column<string>(type: "text", nullable: false)
+                    Expires = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -359,10 +373,10 @@ namespace ImageManager.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ShareTokens_Images_ImageId",
-                        column: x => x.ImageId,
+                        name: "FK_ShareTokens_UserOwnedImages_UserOwnedImageId",
+                        column: x => x.UserOwnedImageId,
                         principalSchema: "identity",
-                        principalTable: "Images",
+                        principalTable: "UserOwnedImages",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -425,15 +439,9 @@ namespace ImageManager.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_DownloadedImages_UserId1",
+                name: "IX_DownloadedImages_UserId",
                 schema: "identity",
                 table: "DownloadedImages",
-                column: "UserId1");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Images_UserId",
-                schema: "identity",
-                table: "Images",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -449,15 +457,27 @@ namespace ImageManager.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ShareTokens_ImageId",
-                schema: "identity",
-                table: "ShareTokens",
-                column: "ImageId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_ShareTokens_UserId",
                 schema: "identity",
                 table: "ShareTokens",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ShareTokens_UserOwnedImageId",
+                schema: "identity",
+                table: "ShareTokens",
+                column: "UserOwnedImageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserOwnedImages_ImageId",
+                schema: "identity",
+                table: "UserOwnedImages",
+                column: "ImageId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_UserOwnedImages_UserId",
+                schema: "identity",
+                table: "UserOwnedImages",
                 column: "UserId");
         }
 
@@ -517,11 +537,15 @@ namespace ImageManager.Migrations
                 schema: "identity");
 
             migrationBuilder.DropTable(
-                name: "Images",
+                name: "UserOwnedImages",
                 schema: "identity");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers",
+                schema: "identity");
+
+            migrationBuilder.DropTable(
+                name: "Images",
                 schema: "identity");
         }
     }

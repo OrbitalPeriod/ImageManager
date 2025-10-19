@@ -1,73 +1,126 @@
+#region Usings
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using ImageManager.Data;
 using ImageManager.Data.Models;
+using ImageManager.Repositories;
 using Microsoft.EntityFrameworkCore;
 using PixivCS.Models.Illust;
+using Microsoft.Extensions.Logging;
+#endregion
 
 namespace ImageManager.Services;
 
+/// <summary>
+/// Manages importing of Pixiv bookmarks for users.
+/// </summary>
 public interface IPixivImageImportManager
 {
-    public Task ImportAllUserBookmarks();
-    public Task ImportBookmarks(User user);
+    /// <summary>
+    /// Imports all bookmark data for every user stored in the system.
+    /// </summary>
+    Task ImportAllUserBookmarks();
+
+    /// <summary>
+    /// Imports bookmark data for a single user.
+    /// </summary>
+    /// <param name="user">The user whose bookmarks should be imported.</param>
+    Task ImportBookmarks(User user);
 }
 
-public class PixivImportManager(IPixivService pixivService, ApplicationDbContext dbContext, IImageImportService imageImportService, ILogger<PixivImportManager> logger) : IPixivImageImportManager
+#region Implementation
+
+/// <summary>
+/// EF Core‑based implementation of <see cref="IPixivImageImportManager"/>.
+/// It coordinates Pixiv API calls, image downloading, and storage via the existing import service.
+/// </summary>
+public class PixivImportManager(
+    IPixivService pixivService,
+    IImageImportService imageImportService,
+    ILogger<PixivImportManager> logger,
+    IUserRepository userRepository,
+    IPlatformTokenRepository platformTokenRepository,
+    IDownloadedImageRepository downloadedImageRepository,
+    IUserOwnedImageRepository userOwnedImageRepository) : IPixivImageImportManager
 {
+    /// <inheritdoc />
     public async Task ImportAllUserBookmarks()
     {
-        var users = await dbContext.Users.Include(u => u.PlatformTokens).Where(u => u.PlatformTokens.Count(pft => pft.Platform == Platform.Pixiv) > 0).ToListAsync();
+        var users = await userRepository.ListAsync();
         foreach (var user in users)
         {
             await ImportBookmarks(user);
         }
     }
+
+    /// <inheritdoc />
     public async Task ImportBookmarks(User user)
     {
-        var items = await dbContext.PlatformTokens.Where(pft => pft.User == user).Where(pt => pt.Platform == Platform.Pixiv)
-            .ToListAsync();
-        foreach (var item in items)
+        if (user == null) throw new ArgumentNullException(nameof(user));
+
+        var tokens = await platformTokenRepository.ListAsync(pft => pft.UserId == user.Id);
+        foreach (var token in tokens)
         {
-            await ImportPixivBookmarks(user, item.PlatformUserId, item.Token, item.CheckPrivate);
+            await ImportPixivBookmarks(user, token.PlatformUserId, token.Token, token.CheckPrivate);
         }
     }
 
+    /// <summary>
+    /// Imports the Pixiv bookmarks for a specific platform account.
+    /// </summary>
     private async Task ImportPixivBookmarks(User user, string pixivUserId, string? pixivRefreshToken, bool checkPrivate)
     {
+        // Retrieve all liked illustrations from Pixiv
         var illustrations = await pixivService.GetLikedBookmarks(pixivUserId, pixivRefreshToken, checkPrivate);
+        if (!illustrations.Any())
+            return;
+
         var illustIds = illustrations.Select(x => x.Id).ToArray();
 
-        var downloadedIds = await dbContext.DownloadedImages
-            .Where(di => illustIds.Contains(di.PlatformImageId))
-            .Select(di => di.PlatformImageId)
-            .ToListAsync();
-        
-        var toDowload = illustrations.Where(ill => !downloadedIds.Contains(ill.Id)).ToList();
-        logger.LogInformation($"Found {toDowload.Count} new illustrations for user {user.UserName} ({user.Id})");
-        foreach (var illustration in toDowload)
+        // Find which of those illustrations have already been downloaded.
+        var existingDownloads = await downloadedImageRepository.ListAsync(di => illustIds.Contains(di.PlatformImageId));
+        var downloadedIds = existingDownloads.Select(di => di.PlatformImageId);
+
+        // Determine which illustrations need to be fetched and imported
+        var toDownload = illustrations.Where(ill => !downloadedIds.Contains(ill.Id)).ToList();
+
+        logger.LogInformation("Found {Count} new illustrations for user {UserName} ({UserId})",
+            toDownload.Count, user.UserName, user.Id);
+
+        foreach (var illustration in toDownload)
         {
             await DownloadImage(user, illustration);
         }
-        logger.LogInformation($"Finished importing {toDowload.Count} illustrations for user {user.UserName} ({user.Id})");
 
-        var exisiting = illustIds.Except(downloadedIds).ToArray();
+        logger.LogInformation("Finished importing {Count} illustrations for user {UserName} ({UserId})",
+            toDownload.Count, user.UserName, user.Id);
 
-        var notAdded = await dbContext.DownloadedImages.Where(d => exisiting.Contains(d.Id))
-            .Where(di => di.Image.UserOwnedImages.Any(uoi => uoi.UserId != user.Id)).ToListAsync();
+        // Find illustrations that were already downloaded but are not yet owned by this user
+        var existingIds = illustIds.Except(downloadedIds).ToArray();
+
+        var notAdded = await downloadedImageRepository.ListAsync(
+            di => existingIds.Contains(di.PlatformImageId) &&
+                  di.Image.UserOwnedImages.Any(uoi => uoi.UserId != user.Id));
 
         foreach (var existingImage in notAdded)
         {
-            dbContext.Add(new UserOwnedImage()
+            await userOwnedImageRepository.AddAsync(new UserOwnedImage
             {
                 UserId = user.Id,
                 ImageId = existingImage.ImageId,
-                Publicity = user.DefaultPublicity,
+                Publicity = user.DefaultPublicity
             });
         }
-        await dbContext.SaveChangesAsync();
-        logger.LogInformation($"Added {notAdded.Count} existing illustrations for user {user.UserName} ({user.Id})");
+
+        logger.LogInformation("Added {Count} existing illustrations for user {UserName} ({UserId})",
+            notAdded.Count, user.UserName, user.Id);
     }
 
-
+    /// <summary>
+    /// Downloads a single illustration and imports it into the system.
+    /// </summary>
     private async Task DownloadImage(User user, IllustInfo illustration)
     {
         byte[] imageBytes;
@@ -75,29 +128,30 @@ public class PixivImportManager(IPixivService pixivService, ApplicationDbContext
         {
             imageBytes = await pixivService.DownloadImage(illustration);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            logger.LogError($"Failed to get tags for {illustration}, due to {e.Message}");
+            logger.LogError(ex,
+                "Failed to download image for illustration {IllustrationId} ({Title})",
+                illustration.Id, illustration.Title);
             return;
         }
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
-        var userOwnedId = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, transaction, user.Id);
+        var imageId = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, user.Id);
 
-        if (userOwnedId == null)
+        if (imageId == null)
         {
-            logger.LogError($"Failed to import image for {illustration}");
+            logger.LogError("Failed to import image for illustration {IllustrationId} ({Title})",
+                illustration.Id, illustration.Title);
             return;
         }
 
-        dbContext.Add(new DownloadedImage()
+        await downloadedImageRepository.AddAsync(new DownloadedImage
         {
             Platform = Platform.Pixiv,
             PlatformImageId = illustration.Id,
-            ImageId = await dbContext.UserOwnedImages.Where(uoi => uoi.Id == userOwnedId).Select(uoi => uoi.ImageId).FirstAsync()
+            ImageId = (Guid)imageId
         });
-
-        await transaction.CommitAsync();
     }
-
 }
+
+#endregion
