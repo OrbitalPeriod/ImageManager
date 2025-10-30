@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using ImageManager.Repositories;
 
 namespace ImageManager.Data.Models;
@@ -14,7 +13,7 @@ public class UserOwnedImage : IEntity<Guid>
 
     public Publicity Publicity { get; set; }
     public ICollection<ShareToken> ShareTokens { get; set; } = [];
-    
+
     public required Guid ImageId { get; init; }
     public Image Image { get; private set; } = null!;
 

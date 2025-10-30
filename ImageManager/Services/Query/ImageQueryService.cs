@@ -1,8 +1,5 @@
 #region Usings
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+
 using ImageManager.Controllers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
@@ -83,9 +80,9 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
 
         return new PaginatedResponse<ImageController.GetImagesResponse>
         {
-            Data       = imageData,
-            Page       = page,
-            PageSize   = pageSize,
+            Data = imageData,
+            Page = page,
+            PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
         };
@@ -135,9 +132,9 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
 
         return new PaginatedResponse<ImageController.GetSearchImagesResponse>
         {
-            Data       = images,
-            Page       = page,
-            PageSize   = pageSize,
+            Data = images,
+            Page = page,
+            PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
         };

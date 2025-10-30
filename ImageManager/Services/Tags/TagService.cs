@@ -1,6 +1,5 @@
 #region Usings
-using System;
-using System.Threading.Tasks;
+
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Repositories;
@@ -47,9 +46,9 @@ public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : IT
 
         return new PaginatedResponse<TagCountDto>
         {
-            Data       = tags.ToArray(),
-            Page       = page,
-            PageSize   = pageSize,
+            Data = tags.ToArray(),
+            Page = page,
+            PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
         };
@@ -98,9 +97,9 @@ public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : IT
 
         return new PaginatedResponse<TagCountDto>
         {
-            Data       = tags.ToArray(),
-            Page       = page,
-            PageSize   = pageSize,
+            Data = tags.ToArray(),
+            Page = page,
+            PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
         };

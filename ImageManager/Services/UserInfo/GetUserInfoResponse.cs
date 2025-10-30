@@ -1,5 +1,5 @@
 #region Usings
-using System;
+
 using ImageManager.Data.Models;
 #endregion
 
@@ -12,9 +12,9 @@ namespace ImageManager.Services.UserInfo;
 /// </summary>
 public record GetUserInfoResponse(
     string Id,
-    
+
     string? UserName,
-    
+
     string? Email,
-    
+
     Publicity DefaultPublicity);

@@ -1,14 +1,9 @@
 #region Usings
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using ImageManager.Data;
+
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
-using Microsoft.EntityFrameworkCore;
 using PixivCS.Models.Illust;
-using Microsoft.Extensions.Logging;
+
 #endregion
 
 namespace ImageManager.Services;

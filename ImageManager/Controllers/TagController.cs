@@ -1,9 +1,8 @@
 #region Usings
-using System;
-using System.Threading.Tasks;
-using ImageManager.Data.Models;         
-using ImageManager.Data.Responses;       
-using ImageManager.Services.Tags;        
+
+using ImageManager.Data.Models;
+using ImageManager.Data.Responses;
+using ImageManager.Services.Tags;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 #endregion

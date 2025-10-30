@@ -1,6 +1,5 @@
 #region Usings
-using System;
-using System.Threading.Tasks;
+
 using ImageManager.Data;
 using Microsoft.EntityFrameworkCore;
 #endregion
@@ -45,14 +44,14 @@ public class DeleteImageService(ApplicationDbContext dbContext) : IDeleteImageSe
     public async Task<DeleteResult> DeleteAsync(Guid imageId, string userId)
     {
         if (userId == null) throw new ArgumentNullException(nameof(userId));
-        
+
         var uoi = await dbContext.UserOwnedImages
             .FirstOrDefaultAsync(u => u.ImageId == imageId);
-        
+
         if (uoi == null) return DeleteResult.NotFound;
-        
+
         if (uoi.UserId != userId) return DeleteResult.Forbidden;
-        
+
         dbContext.UserOwnedImages.Remove(uoi);
         await dbContext.SaveChangesAsync();
 

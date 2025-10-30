@@ -1,6 +1,6 @@
 #region Usings
-using System.Threading.Tasks;
-using ImageManager.Services.UserInfo;   
+
+using ImageManager.Services.UserInfo;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 #endregion
@@ -26,7 +26,7 @@ public sealed class UserController(
     public async Task<ActionResult<GetUserInfoResponse>> GetUserInfo()
     {
         var response = await userInfoService.GetCurrentUserInfoAsync(User);
-        
+
         if (response is null) return Unauthorized();
 
         return Ok(response);

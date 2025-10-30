@@ -1,6 +1,5 @@
 #region Usings
-using System;
-using System.Threading.Tasks;
+
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
@@ -35,10 +34,10 @@ public class ShareTokenService(
 
         var shareToken = new Data.Models.ShareToken()
         {
-            Created          = DateTime.UtcNow,
-            Expires          = expiration ?? DateTime.UtcNow.AddDays(3),  // Default to 3 days if none supplied.
+            Created = DateTime.UtcNow,
+            Expires = expiration ?? DateTime.UtcNow.AddDays(3),  // Default to 3 days if none supplied.
             UserOwnedImageId = userOwnedImage.Id,
-            UserId           = user.Id
+            UserId = user.Id
         };
 
         // Persist the token via the repository layer.
