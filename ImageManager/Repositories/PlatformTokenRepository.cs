@@ -5,5 +5,5 @@ namespace ImageManager.Repositories;
 
 public class PlatformTokenRepository(ApplicationDbContext dbContext) : EfRepository<PlatformToken, Guid>(dbContext), IPlatformTokenRepository
 {
-    
+
 }

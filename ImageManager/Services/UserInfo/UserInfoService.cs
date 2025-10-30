@@ -1,7 +1,6 @@
 #region Usings
-using System;
+
 using System.Security.Claims;
-using System.Threading.Tasks;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 using Microsoft.AspNetCore.Identity;
@@ -21,7 +20,7 @@ public class UserInfoService(
     public async Task<GetUserInfoResponse?> GetCurrentUserInfoAsync(ClaimsPrincipal principal)
     {
         if (principal == null) throw new ArgumentNullException(nameof(principal));
-        
+
         var userId = userManager.GetUserId(principal);
         if (string.IsNullOrEmpty(userId)) return null;
 

@@ -1,7 +1,5 @@
 #region Usings
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 #endregion
@@ -23,16 +21,16 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
     public async Task AddTokenAsync(AddTokenRequest request, User user)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
-        if (user == null)   throw new ArgumentNullException(nameof(user));
+        if (user == null) throw new ArgumentNullException(nameof(user));
 
         var token = new PlatformToken
         {
             PlatformUserId = request.PlatformUserId,
-            Expires        = request.Expires,
-            Token          = request.Token,
-            Platform       = request.Platform,
-            CheckPrivate   = request.CheckPrivate,
-            UserId         = user.Id
+            Expires = request.Expires,
+            Token = request.Token,
+            Platform = request.Platform,
+            CheckPrivate = request.CheckPrivate,
+            UserId = user.Id
         };
 
         await platformTokenRepository.AddAsync(token);

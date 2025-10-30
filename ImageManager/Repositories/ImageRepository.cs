@@ -1,6 +1,5 @@
 #region Usings
-using System;
-using System.Linq;                    
+
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using Microsoft.EntityFrameworkCore;
@@ -44,7 +43,7 @@ public class ImageRepository(ApplicationDbContext dbContext)
         // Base conditions – covers ownership and public visibility.
         var baseQuery = dbContext.UserOwnedImages.Where(uoid =>
             (user != null && uoid.UserId == user.Id) ||                                      // owned images
-            // Open + General rating – public access for everyone
+                                                                                             // Open + General rating – public access for everyone
             (uoid.Publicity == Publicity.Open &&
              uoid.Image.AgeRating == AgeRating.General) ||
             // Open + Sensitive/Explicit/Questionable – requires a logged‑in user

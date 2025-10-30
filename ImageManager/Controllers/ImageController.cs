@@ -26,7 +26,7 @@ public class ImageController(
     IFileService fileService,
     ILogger<ImageController> logger) : ControllerBase
 {
-    
+
     #region DTOs used by this controller
     /// <summary>Response returned for a paginated list of images.</summary>
     public record GetImagesResponse(Guid Id, AgeRating Rating);
@@ -111,7 +111,7 @@ public class ImageController(
         {
             DeleteResult.NotFound => NotFound(),
             DeleteResult.Forbidden => Forbid(),
-            DeleteResult.Deleted  => Ok(),
+            DeleteResult.Deleted => Ok(),
             _ => BadRequest()
         };
     }
@@ -126,7 +126,7 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageDataAccessAsync(imageId, user, token);
-        if (!result.Found)   return NotFound();
+        if (!result.Found) return NotFound();
         if (!result.Allowed) return Forbid();
 
         var data = result.Data;
@@ -146,7 +146,7 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
-        if (!result.Found)   return NotFound();
+        if (!result.Found) return NotFound();
         if (!result.Allowed) return Forbid();
 
         var image = result.Image;
@@ -155,6 +155,23 @@ public class ImageController(
 
         // Return the image file
         return await ReturnImage(image);
+    }
+
+    [HttpGet("{imageId:guid}/thumb")]
+    public async Task<IActionResult> GetThumbImage(Guid imageId, [FromQuery] Guid? token)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+
+        var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
+        if (!result.Found) return NotFound();
+        if (!result.Allowed) return Forbid();
+
+        var image = result.Image;
+        if (image == null)
+            return NotFound("Requested image not found.");
+
+        // Return the image file
+        return await ReturnThumbnail(image);
     }
 
     /// <summary>
@@ -175,15 +192,28 @@ public class ImageController(
     #endregion
 
     #region Helpers
+    private async Task<IActionResult> ReturnImage(Image image)
+    {
+        return await ReturnImg(image, false);
+    }
+
+    private async Task<IActionResult> ReturnThumbnail(Image image)
+    {
+        return await ReturnImg(image, true);
+    }
     /// <summary>
     /// Loads an image from the file system and returns it as a FileResult.  
     /// Handles MIME‑type inference and I/O errors gracefully.
     /// </summary>
-    private async Task<IActionResult> ReturnImage(Image image)
+    private async Task<IActionResult> ReturnImg(Image image, bool thumbnail)
     {
         try
         {
-            var fileBytes = await fileService.LoadFile(image.Id);
+            byte[] fileBytes;
+            if (!thumbnail) fileBytes = await fileService.LoadFullImage(image.Id);
+            else fileBytes = await fileService.LoadThumbnailImage(image.Id);
+
+
             if (fileBytes == null || fileBytes.Length == 0) return NotFound("Requested image not found.");
 
             // Determine MIME type – prefer the stored value, otherwise guess from header bytes.

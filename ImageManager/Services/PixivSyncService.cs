@@ -1,10 +1,5 @@
 #region Usings
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+
 #endregion
 
 namespace ImageManager.Services;
@@ -33,7 +28,7 @@ public sealed class PixivSyncService : BackgroundService
     public PixivSyncService(IServiceScopeFactory scopeFactory, ILogger<PixivSyncService> logger)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        _logger       = logger     ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <summary>

@@ -1,5 +1,4 @@
 using ImageManager.Data.Models;
-using ImageManager.Services;
 using ImageManager.Services.PlatformTokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -13,8 +12,8 @@ namespace ImageManager.Controllers;
 [ApiController]
 [Route("api/platform-tokens")]
 public class PlatformTokenController(
-    UserManager<User>          userManager,
-    IPlatformTokenService      tokenService) : ControllerBase
+    UserManager<User> userManager,
+    IPlatformTokenService tokenService) : ControllerBase
 {
     #region Add
 
@@ -70,7 +69,7 @@ public class PlatformTokenController(
         {
             DeleteResult.NotFound => NotFound(),
             DeleteResult.Forbidden => Forbid(),
-            DeleteResult.Deleted  => Ok(),
+            DeleteResult.Deleted => Ok(),
             _ => BadRequest()
         };
     }

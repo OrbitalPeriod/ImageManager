@@ -1,12 +1,10 @@
 #region Usings
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
-using ImageManager.Repositories;
 using ImageManager.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using System.ComponentModel.DataAnnotations; 
+using System.ComponentModel.DataAnnotations;
 #endregion
 
 namespace ImageManager.Controllers;

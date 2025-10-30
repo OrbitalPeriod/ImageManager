@@ -1,6 +1,5 @@
 #region Usings
-using System;
-using System.Threading.Tasks;
+
 using PixivCS.Api;
 using PixivCS.Models.Common;
 using PixivCS.Models.Illust;
@@ -56,9 +55,9 @@ public sealed class PixivService : IPixivService
         _downloadRefreshToken = downloadRefreshToken;
         _api = new PixivAppApi(new ConnectionConfig
         {
-            MaxRetries   = 3,
-            EnableRetry  = true,
-            TimeoutMs    = 3000
+            MaxRetries = 3,
+            EnableRetry = true,
+            TimeoutMs = 3000
         });
     }
 

@@ -1,8 +1,5 @@
 #region Usings
-using System;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using ImageManager.Data;
@@ -12,10 +9,7 @@ using ImageManager.Services.PlatformTokens;
 using ImageManager.Services.Query;
 using ImageManager.Services.Tags;
 using ImageManager.Services.UserInfo;
-using ImageManager.Data.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Http;
-using System.Threading.Tasks;
 using ImageManager.Extensions;
 
 using User = ImageManager.Data.Models.User;
@@ -34,7 +28,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddIdentity<User, IdentityRole>(options =>
 {
-    options.Password.RequireDigit   = true;
+    options.Password.RequireDigit = true;
     options.Password.RequiredLength = 6;
     options.User.RequireUniqueEmail = true;
 })
@@ -43,11 +37,11 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.LoginPath            = "/Auth/Login";
-    options.LogoutPath           = "/Auth/Logout";
-    options.ExpireTimeSpan       = TimeSpan.FromMinutes(5);
-    options.SlidingExpiration   = true;
-    options.Events.OnRedirectToLogin     = ctx =>
+    options.LoginPath = "/Auth/Login";
+    options.LogoutPath = "/Auth/Logout";
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+    options.SlidingExpiration = true;
+    options.Events.OnRedirectToLogin = ctx =>
     {
         ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
         return Task.CompletedTask;
@@ -86,9 +80,12 @@ builder.Services.AddSingleton<IPixivService>(_ => new PixivService(
 builder.Services.AddSingleton<ITaggerService>(_ => new TaggerService(
     builder.Configuration["ANIMETAGGER_URL"] ?? throw new Exception("ANIMETAGGER_URL is required")));
 
-builder.Services.AddSingleton<IFileService>(_ =>
-    new FileService(builder.Configuration["FILE_DIRECTORY"]
-        ?? throw new Exception("FILE_DIRECTORY is required")));
+builder.Services.AddSingleton<IFileService>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var logger = sp.GetRequiredService<ILogger<FileService>>();
+    return new FileService(config, logger);
+});
 #endregion
 
 #region Hosted Services
@@ -118,9 +115,9 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title       = "www",
+        Title = "www",
         Description = "wwwww",
-        Version     = "v1"
+        Version = "v1"
     });
 });
 
