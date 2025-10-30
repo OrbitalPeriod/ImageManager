@@ -1,5 +1,5 @@
 #region Usings
-using System;
+
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using Microsoft.EntityFrameworkCore;

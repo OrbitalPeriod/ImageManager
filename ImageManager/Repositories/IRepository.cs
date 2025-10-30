@@ -1,9 +1,6 @@
 #region Usings
-using System;
-using System.Collections.Generic;
-using System.Linq;
+
 using System.Linq.Expressions;
-using System.Threading.Tasks;
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using Microsoft.EntityFrameworkCore;

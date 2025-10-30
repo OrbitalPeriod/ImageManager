@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using ImageManager.Repositories;
 
 namespace ImageManager.Data.Models;
@@ -18,4 +17,6 @@ public class Image : IEntity<Guid>
 
     public required int? DownloadedImageId { get; init; }
     public DownloadedImage? DownloadedImage { get; private set; }
+
+    public required bool HasThumbnail { get; set; } = false;
 }

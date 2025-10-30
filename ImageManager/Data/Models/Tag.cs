@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 using ImageManager.Repositories;
 
 namespace ImageManager.Data.Models;

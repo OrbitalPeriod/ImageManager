@@ -1,5 +1,5 @@
 #region Usings
-using System;
+
 using ImageManager.Data;
 using ImageManager.Data.Models;
 #endregion
@@ -35,16 +35,16 @@ public class UserOwnedImageRepository(ApplicationDbContext dbContext)
     {
         var baseQuery = dbContext.UserOwnedImages.Where(uoid =>
             (id != null && uoid.UserId == id) ||
-            
+
             (uoid.Publicity == Publicity.Open &&
              uoid.Image.AgeRating == AgeRating.General) ||
-            
+
             (uoid.Publicity == Publicity.Open &&
              (uoid.Image.AgeRating == AgeRating.Sensitive ||
               uoid.Image.AgeRating == AgeRating.Explicit ||
               uoid.Image.AgeRating == AgeRating.Questionable) &&
              id != null) ||
-            
+
             (uoid.Publicity == Publicity.Restricted && id != null));
 
         if (token != null)

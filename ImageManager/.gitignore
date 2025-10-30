@@ -260,6 +260,8 @@ _Pvt_Extensions
 .paket/paket.exe
 paket-files/
 
+.env
+
 # FAKE - F# Make
 .fake/
 

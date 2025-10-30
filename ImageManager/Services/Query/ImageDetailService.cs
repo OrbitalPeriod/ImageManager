@@ -1,8 +1,5 @@
 #region Usings
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+
 using ImageManager.Controllers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
@@ -89,9 +86,9 @@ public class ImageDetailService(IImageRepository userOwnedImageRepository) : IIm
 
         return new ImageAccessResult
         {
-            Found   = true,
+            Found = true,
             Allowed = allowed,
-            Image   = image
+            Image = image
         };
     }
 
@@ -116,9 +113,9 @@ public class ImageDetailService(IImageRepository userOwnedImageRepository) : IIm
 
         return new ImageDataAccessResult
         {
-            Found   = true,
+            Found = true,
             Allowed = true,
-            Data    = data
+            Data = data
         };
     }
 }

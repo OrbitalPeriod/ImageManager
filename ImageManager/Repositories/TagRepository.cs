@@ -1,8 +1,5 @@
 #region Usings
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +39,7 @@ public class TagRepository(ApplicationDbContext dbContext)
             .ToArray();
 
         if (!processedTags.Any()) return [];
-        
+
         var existing = await dbContext.Tags
             .Where(t => processedTags.Contains(t.Name))
             .ToDictionaryAsync(t => t.Name, t => t);
@@ -54,7 +51,7 @@ public class TagRepository(ApplicationDbContext dbContext)
             {
 
                 tag = new Tag { Name = name };
-                dbContext.Tags.Add(tag);   
+                dbContext.Tags.Add(tag);
             }
 
             result.Add(tag);

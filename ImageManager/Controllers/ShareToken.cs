@@ -1,6 +1,6 @@
 #region Usings
-using ImageManager.Data.Models;          
-using ImageManager.Services.ShareToken;  
+using ImageManager.Data.Models;
+using ImageManager.Services.ShareToken;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -39,7 +39,7 @@ public sealed class ShareTokenController(
     {
         var user = await userManager.GetUserAsync(User);
         if (user is null) return Unauthorized();
-        
+
         Guid? tokenId;
         try
         {
@@ -52,7 +52,7 @@ public sealed class ShareTokenController(
         {
             return StatusCode(500, $"Internal error: {ex.Message}");
         }
-        
+
         if (!tokenId.HasValue) return NotFound();
 
         return Ok(tokenId.Value);

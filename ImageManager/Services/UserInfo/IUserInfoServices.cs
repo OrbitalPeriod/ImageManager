@@ -1,7 +1,7 @@
 #region Usings
-using System;
+
 using System.Security.Claims;
-using System.Threading.Tasks;
+
 #endregion
 
 namespace ImageManager.Services.UserInfo;

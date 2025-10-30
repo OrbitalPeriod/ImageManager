@@ -36,30 +36,30 @@ public class CharacterRepository(ApplicationDbContext dbContext)
         if (names == null) throw new ArgumentNullException(nameof(names));
 
         var processed = names
-            .Where(n => !string.IsNullOrWhiteSpace(n))      
-            .Select(n => n.Trim().ToLowerInvariant())     
+            .Where(n => !string.IsNullOrWhiteSpace(n))
+            .Select(n => n.Trim().ToLowerInvariant())
             .Distinct()
             .ToArray();
 
         if (processed.Length == 0) return [];
-        
+
         var existing = await dbContext.Characters
             .Where(c => processed.Contains(c.Name))
             .ToDictionaryAsync(c => c.Name, c => c);
-        
+
         var result = new List<Character>(processed.Length);
         foreach (var name in processed)
         {
             if (!existing.TryGetValue(name, out var character))
             {
                 character = new Character { Name = name };
-                dbContext.Characters.Add(character);   
+                dbContext.Characters.Add(character);
             }
 
             result.Add(character);
         }
 
-        return result;     
+        return result;
     }
 
     #endregion

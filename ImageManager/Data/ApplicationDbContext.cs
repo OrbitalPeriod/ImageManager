@@ -28,7 +28,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<User>().HasMany(e => e.Images).WithOne(e => e.User);
         builder.Entity<User>().HasMany(e => e.ShareTokens).WithOne(e => e.User).HasForeignKey(st => st.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<User>().HasMany(e => e.PlatformTokens).WithOne(e => e.User);
-        
+
         builder.Entity<Character>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Entity<Character>().HasKey(i => i.Id);
         builder.Entity<DownloadedImage>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");

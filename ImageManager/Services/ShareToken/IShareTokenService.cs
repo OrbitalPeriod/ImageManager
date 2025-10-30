@@ -1,6 +1,5 @@
 #region Usings
-using System;
-using System.Threading.Tasks;
+
 using ImageManager.Data.Models;
 #endregion
 

@@ -1,7 +1,5 @@
 #region Usings
-using System;
-using System.Linq;
-using System.Threading.Tasks;
+
 using ImageManager.Controllers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
@@ -87,9 +85,9 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
 
         return new PaginatedResponse<CharacterController.GetCharacterResponse>
         {
-            Data       = characters.ToArray(),
-            Page       = page,
-            PageSize   = pageSize,
+            Data = characters.ToArray(),
+            Page = page,
+            PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
         };
@@ -124,7 +122,7 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
             .GroupBy(c => new { c.Id, c.Name })
             .Select(g => new
             {
-                Id   = g.Key.Id,
+                Id = g.Key.Id,
                 Name = g.Key.Name,
                 Count = g.Count()
             });
@@ -140,12 +138,12 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
 
         return new PaginatedResponse<CharacterController.GetCharacterResponse>
         {
-            Data       = pageData.Select(p => new CharacterController.GetCharacterResponse(
+            Data = pageData.Select(p => new CharacterController.GetCharacterResponse(
                 p.Id,
                 p.Name,
                 p.Count)).ToArray(),
-            Page       = page,
-            PageSize   = pageSize,
+            Page = page,
+            PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
         };

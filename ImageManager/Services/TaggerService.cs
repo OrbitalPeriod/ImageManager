@@ -1,6 +1,5 @@
 #region Usings
-using System;
-using System.Threading.Tasks;
+
 using Google.Protobuf;
 using Grpc.Net.Client;
 #endregion
@@ -44,7 +43,7 @@ public sealed class TaggerService : ITaggerService
         var channelOptions = new GrpcChannelOptions
         {
             MaxReceiveMessageSize = 124 * 1024 * 1024, // 
-            MaxSendMessageSize   = 124 * 1024 * 1024
+            MaxSendMessageSize = 124 * 1024 * 1024
         };
 
         var channel = GrpcChannel.ForAddress(serviceUrl, channelOptions);

@@ -1,12 +1,9 @@
 #region Usings
-using System;
-using System.IO;
-using System.Threading.Tasks;
+
 using CoenM.ImageHash.HashAlgorithms;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using SixLabors.ImageSharp.PixelFormats;
 #endregion
 
@@ -74,7 +71,7 @@ public class ImageImportService(
         // --------------------------------------------------------------------
         // 2️⃣  Resolve Tag & Character entities from the repositories
         // --------------------------------------------------------------------
-        var tagEntities       = await tagRepository.GetByStringsAsync(imageData.GeneralTags);
+        var tagEntities = await tagRepository.GetByStringsAsync(imageData.GeneralTags);
         var characterEntities = await characterRepository.GetByNamesAsync(imageData.CharacterTags);
 
         // --------------------------------------------------------------------
@@ -133,6 +130,7 @@ public class ImageImportService(
                 Characters = characterEntities.ToList(),
                 AgeRating = (AgeRating)imageData.Rating,
                 DownloadedImageId = null,
+                HasThumbnail = true,
             };
 
             await imageRepository.AddAsync(newImage);
