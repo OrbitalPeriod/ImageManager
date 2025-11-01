@@ -1,39 +1,39 @@
+using ImageManager.Data.Models;
+using ImageManager.Repositories;
+
 namespace ImageManager.Services;
 
-/// <summary>
-/// Background service that periodically imports all Pixiv user bookmarks.
-/// </summary>
-public sealed class PixivSyncService : BackgroundService
+public class RemoteSyncService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly ILogger<PixivSyncService> _logger;
-
+    private readonly ILogger<RemoteSyncService> _logger;
+    
     /// <summary>
-    /// How often the sync should run.
-    /// </summary>
-    private static readonly TimeSpan SyncInterval = TimeSpan.FromMinutes(30);
-
-    /// <summary>
-    /// Creates a new instance of <see cref="PixivSyncService"/>.
+    /// Creates a new instance of <see cref="RemoteSyncService"/>.
     /// </summary>
     /// <param name="scopeFactory">Factory for creating scoped service providers.</param>
     /// <param name="logger">Logger used by the service.</param>
     /// <exception cref="ArgumentNullException">
     /// Thrown if <paramref name="scopeFactory"/> or <paramref name="logger"/> is null.
     /// </exception>
-    public PixivSyncService(IServiceScopeFactory scopeFactory, ILogger<PixivSyncService> logger)
+    public RemoteSyncService(IServiceScopeFactory scopeFactory, ILogger<RemoteSyncService> logger)
     {
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
-
+    
+    /// <summary>
+    /// How often the sync should run.
+    /// </summary>
+    private static readonly TimeSpan SyncInterval = TimeSpan.FromMinutes(30);
+    
     /// <summary>
     /// Main execution loop. Runs until the application is stopped.
     /// </summary>
     /// <param name="stoppingToken">Cancellation token that signals when the host is shutting down.</param>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("PixivSyncService started – running every {Interval}.", SyncInterval);
+        _logger.LogInformation("Remote sync started – running every {Interval}.", SyncInterval);
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -41,12 +41,22 @@ public sealed class PixivSyncService : BackgroundService
             {
                 // 1️⃣ Create a scoped service provider for the import operation.
                 await using var scope = _scopeFactory.CreateAsyncScope();
-                var importManager = scope.ServiceProvider.GetRequiredService<IPixivImageImportManager>();
-
-                // 2️⃣ Trigger the import of all user bookmarks.
-                await importManager.ImportAllUserBookmarks();
-
-                _logger.LogInformation("Pixiv sync completed at {Timestamp}.", DateTime.UtcNow);
+                var platformTokenRepository = scope.ServiceProvider.GetRequiredService<IPlatformTokenRepository>();
+                var pixivImageImportManager = scope.ServiceProvider.GetRequiredService<IPixivImageImportManager>();
+                
+                //Run import for all tokens
+                var tokens = await platformTokenRepository.GetAllAsync();
+                foreach (var platformToken in tokens)
+                {
+                    switch (platformToken.Platform)
+                    {
+                        case Platform.Pixiv:
+                            await pixivImageImportManager.ImportAsync(platformToken);
+                            break;
+                    }
+                }
+                
+                _logger.LogInformation("Image sync completed at {Timestamp}.", DateTime.UtcNow);
             }
             catch (Exception ex) when (!(ex is OperationCanceledException))
             {
@@ -66,6 +76,8 @@ public sealed class PixivSyncService : BackgroundService
             }
         }
 
-        _logger.LogInformation("PixivSyncService stopped.");
+        _logger.LogInformation("RemoteSyncService stopped.");
     }
+    
 }
+

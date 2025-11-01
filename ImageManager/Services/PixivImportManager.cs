@@ -11,18 +11,9 @@ namespace ImageManager.Services;
 /// <summary>
 /// Manages importing of Pixiv bookmarks for users.
 /// </summary>
-public interface IPixivImageImportManager
+public interface IPixivImageImportManager : IImageImportManager
 {
-    /// <summary>
-    /// Imports all bookmark data for every user stored in the system.
-    /// </summary>
-    Task ImportAllUserBookmarks();
 
-    /// <summary>
-    /// Imports bookmark data for a single user.
-    /// </summary>
-    /// <param name="user">The user whose bookmarks should be imported.</param>
-    Task ImportBookmarks(User user);
 }
 
 #region Implementation
@@ -38,115 +29,159 @@ public class PixivImportManager(
     IUserRepository userRepository,
     IPlatformTokenRepository platformTokenRepository,
     IDownloadedImageRepository downloadedImageRepository,
-    IUserOwnedImageRepository userOwnedImageRepository) : IPixivImageImportManager
+    IUserOwnedImageRepository userOwnedImageRepository,
+    ITransactionService transactionService) : IPixivImageImportManager
 {
     /// <inheritdoc />
-    public async Task ImportAllUserBookmarks()
+public async Task ImportAsync(PlatformToken token)
+{
+    if (token.Platform != Platform.Pixiv)
+        throw new ArgumentException("Token must be Pixiv", nameof(token));
+
+    try
     {
-        var users = await userRepository.ListAsync();
-        foreach (var user in users)
+        logger.LogInformation("Starting Pixiv import for user {UserName} ({UserId})", 
+            token.User.UserName, token.UserId);
+
+        var bookmarks = await pixivService.GetLikedBookmarks(token.PlatformUserId, token.Token, token.CheckPrivate);
+
+        if (!bookmarks.Any())
         {
-            await ImportBookmarks(user);
-        }
-    }
-
-    /// <inheritdoc />
-    public async Task ImportBookmarks(User user)
-    {
-        if (user == null) throw new ArgumentNullException(nameof(user));
-
-        var tokens = await platformTokenRepository.ListAsync(pft => pft.UserId == user.Id);
-        foreach (var token in tokens)
-        {
-            await ImportPixivBookmarks(user, token.PlatformUserId, token.Token, token.CheckPrivate);
-        }
-    }
-
-    /// <summary>
-    /// Imports the Pixiv bookmarks for a specific platform account.
-    /// </summary>
-    private async Task ImportPixivBookmarks(User user, string pixivUserId, string? pixivRefreshToken, bool checkPrivate)
-    {
-        // Retrieve all liked illustrations from Pixiv
-        var illustrations = await pixivService.GetLikedBookmarks(pixivUserId, pixivRefreshToken, checkPrivate);
-        if (!illustrations.Any())
+            logger.LogInformation("No new bookmarks found for user {UserName} ({UserId})",
+                token.User.UserName, token.UserId);
             return;
+        }
 
-        var illustIds = illustrations.Select(x => x.Id).ToArray();
+        var illustIds = bookmarks.Select(x => x.Id).ToArray();
 
-        // Find which of those illustrations have already been downloaded.
-        var existingDownloads = await downloadedImageRepository.ListAsync(di => illustIds.Contains(di.PlatformImageId));
-        var downloadedIds = existingDownloads.Select(di => di.PlatformImageId);
+        // Check which illustrations are already downloaded
+        var existingDownloads = await downloadedImageRepository.ListAsync(
+            di => illustIds.Contains(di.PlatformImageId));
 
-        // Determine which illustrations need to be fetched and imported
-        var toDownload = illustrations.Where(ill => !downloadedIds.Contains(ill.Id)).ToList();
+        var downloadedIds = existingDownloads.Select(di => di.PlatformImageId).ToHashSet();
+
+        var toDownload = bookmarks.Where(ill => !downloadedIds.Contains(ill.Id)).ToList();
 
         logger.LogInformation("Found {Count} new illustrations for user {UserName} ({UserId})",
-            toDownload.Count, user.UserName, user.Id);
+            toDownload.Count, token.User.UserName, token.UserId);
+
+        int successCount = 0;
+        int failCount = 0;
 
         foreach (var illustration in toDownload)
         {
-            await DownloadImage(user, illustration);
+            try
+            {
+                await DownloadImage(token.User, illustration);
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                failCount++;
+                logger.LogError(ex,
+                    "Failed to download or import illustration {IllustrationId} ({Title}) for user {UserName} ({UserId})",
+                    illustration.Id, illustration.Title, token.User.UserName, token.UserId);
+            }
         }
 
-        logger.LogInformation("Finished importing {Count} illustrations for user {UserName} ({UserId})",
-            toDownload.Count, user.UserName, user.Id);
+        logger.LogInformation(
+            "Completed downloading Pixiv illustrations for user {UserName} ({UserId}): {SuccessCount} succeeded, {FailCount} failed",
+            token.User.UserName, token.UserId, successCount, failCount);
 
-        // Find illustrations that were already downloaded but are not yet owned by this user
+        // Handle existing illustrations not yet linked to this user
         var existingIds = illustIds.Except(downloadedIds).ToArray();
 
-        var notAdded = await downloadedImageRepository.ListAsync(
-            di => existingIds.Contains(di.PlatformImageId) &&
-                  di.Image.UserOwnedImages.Any(uoi => uoi.UserId != user.Id));
+        List<UserOwnedImage> newUserLinks = new();
 
-        foreach (var existingImage in notAdded)
+        try
         {
-            await userOwnedImageRepository.AddAsync(new UserOwnedImage
-            {
-                UserId = user.Id,
-                ImageId = existingImage.ImageId,
-                Publicity = user.DefaultPublicity
-            });
-        }
+            var notAdded = await downloadedImageRepository.ListAsync(
+                di => existingIds.Contains(di.PlatformImageId) &&
+                      di.Image.UserOwnedImages.All(uoi => uoi.UserId != token.UserId));
 
-        logger.LogInformation("Added {Count} existing illustrations for user {UserName} ({UserId})",
-            notAdded.Count, user.UserName, user.Id);
+            foreach (var existingImage in notAdded)
+            {
+                newUserLinks.Add(new UserOwnedImage
+                {
+                    UserId = token.UserId,
+                    ImageId = existingImage.ImageId,
+                    Publicity = token.User.DefaultPublicity
+                });
+            }
+
+            if (newUserLinks.Any())
+                foreach (var userLink in newUserLinks)
+                {
+                    await userOwnedImageRepository.AddAsync(userLink);
+                }
+            
+            logger.LogInformation("Added {Count} existing illustrations for user {UserName} ({UserId})",
+                newUserLinks.Count, token.User.UserName, token.UserId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to link existing illustrations for user {UserName} ({UserId})",
+                token.User.UserName, token.UserId);
+        }
     }
+    catch (Exception ex)
+    {
+        logger.LogCritical(ex,
+            "Unexpected error during Pixiv import for user {UserName} ({UserId})",
+            token.User.UserName, token.UserId);
+        throw; 
+    }
+}
+
 
     /// <summary>
     /// Downloads a single illustration and imports it into the system.
     /// </summary>
     private async Task DownloadImage(User user, IllustInfo illustration)
     {
-        byte[] imageBytes;
+        await using var transaction = await transactionService.BeginTransactionAsync();
+
         try
         {
-            imageBytes = await pixivService.DownloadImage(illustration);
+            byte[] imageBytes;
+            try
+            {
+                imageBytes = await pixivService.DownloadImage(illustration);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex,
+                    "Failed to download image for illustration {IllustrationId} ({Title})",
+                    illustration.Id, illustration.Title);
+                await transaction.RollbackAsync();
+                return;
+            }
+
+            var imageId = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, user.Id);
+            if (imageId == null)
+            {
+                logger.LogError("Failed to import image for illustration {IllustrationId} ({Title})",
+                    illustration.Id, illustration.Title);
+                await transaction.RollbackAsync();
+                return;
+            }
+
+            await downloadedImageRepository.AddAsync(new DownloadedImage
+            {
+                Platform = Platform.Pixiv,
+                PlatformImageId = illustration.Id,
+                ImageId = imageId.Value
+            });
+
+            await transaction.CommitAsync();
+            logger.LogInformation("Successfully downloaded and imported illustration {IllustrationId}", illustration.Id);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Failed to download image for illustration {IllustrationId} ({Title})",
-                illustration.Id, illustration.Title);
-            return;
+            logger.LogError(ex, "Unexpected error while processing illustration {IllustrationId}", illustration.Id);
+            await transaction.RollbackAsync();
         }
-
-        var imageId = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, user.Id);
-
-        if (imageId == null)
-        {
-            logger.LogError("Failed to import image for illustration {IllustrationId} ({Title})",
-                illustration.Id, illustration.Title);
-            return;
-        }
-
-        await downloadedImageRepository.AddAsync(new DownloadedImage
-        {
-            Platform = Platform.Pixiv,
-            PlatformImageId = illustration.Id,
-            ImageId = (Guid)imageId
-        });
     }
 }
-
 #endregion

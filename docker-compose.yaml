@@ -1,63 +1,61 @@
 ﻿services:
   AnimeTagger:
-    image: animetagger 
+    image: registry.orbitalperiod.net/animetagger:latest
     build:
-      context: ./AnimeTagger/ 
-    ports:
-      - "50051:50051"
+      context: ./AnimeTagger/
     env_file:
-      - path: "./.env"
-    profiles:
-      - "tagger"
-    networks:
-      - network
+      - "./.env"
+      - "./.docker.env"
+    networks: ["imagemanager_network"]
+
   imagemanager:
-    image: imagemanager
+    image: registry.orbitalperiod.net/imagemanager:latest
     build:
-      context: ./ImageManager/
-    profiles:
-      - "backend"
+      context: ./ImageManager/ 
     ports:
-      - "8080:8080"
+      - "8173:8080"
+    env_file:
+      - "./.env"
+      - "./.docker.env"
+      - "./.secrets.env"
+    volumes:
+      - images:/Images
     depends_on:
       database:
         condition: service_healthy
-    env_file:
-      - path: "./.env"
-    networks:
-        - network
+    networks: ["imagemanager_network", "network"]
+
   database:
-    image: 'postgres:latest'
-    networks:
-      - network
+    image: postgres:latest
     env_file:
-      - path: "./.env"
-        required: true
-    ports:
-      - "5432:5432"
+      - "./.env"
+      - "./.docker.env"
     volumes:
-      - /db-init:/docker-entrypoint-initdb.d
       - db-data:/var/lib/postgresql/data
-    profiles:
-      - "database"
+    networks: ["imagemanager_network"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgresql"]
       interval: 5s
       timeout: 2s
       retries: 10
+
   frontend:
+    image: registry.orbitalperiod.net/frontend:latest
     build:
       context: ./Frontend/
-    networks:
-      - network
     env_file:
-        - "./.env"
+      - "./.env"
+      - "./.docker.env"
     ports:
       - "8081:80"
-    profiles:
-      - "frontend"
+    networks: ["imagemanager_network"]
+
 networks:
-  network:
+  imagemanager_network:
     driver: bridge
+  network:
+    external: true
+
 volumes:
   db-data:
+  images:

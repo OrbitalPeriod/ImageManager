@@ -134,7 +134,10 @@ public interface IImageRepository : IRepository<Image, Guid>
 /// <summary>
 /// Repository interface for platform‑level tokens.
 /// </summary>
-public interface IPlatformTokenRepository : IRepository<PlatformToken, Guid>;
+public interface IPlatformTokenRepository : IRepository<PlatformToken, Guid>
+{
+    Task<IReadOnlyCollection<PlatformToken>> GetAllAsync();
+}
 
 /// <summary>
 /// Repository interface for share tokens.

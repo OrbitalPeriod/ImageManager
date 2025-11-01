@@ -15,7 +15,8 @@ using ImageManager.Extensions;
 using User = ImageManager.Data.Models.User;
 #endregion
 
-DotNetEnv.Env.TraversePath().Load();
+DotNetEnv.Env.Load("../.env");
+DotNetEnv.Env.Load("../.secrets.env");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -68,6 +69,7 @@ builder.Services.AddScoped<IDeleteImageService, DeleteImageService>();
 builder.Services.AddScoped<IImageDetailService, ImageDetailService>();
 builder.Services.AddScoped<IImageQueryService, ImageQueryService>();
 builder.Services.AddScoped<IUploadImageService, UploadImageService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IUserInfoService, UserInfoService>();
@@ -94,7 +96,7 @@ builder.Services.AddScoped<IImageImportService, ImageImportService>();
 builder.Services.AddScoped<IPlatformTokenService, PlatformTokenService>();
 
 // Runs the Pixiv sync loop in the background
-builder.Services.AddHostedService<PixivSyncService>();
+builder.Services.AddHostedService<RemoteSyncService>();
 #endregion
 
 #region Middleware & API Setup
