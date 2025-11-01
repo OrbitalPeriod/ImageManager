@@ -1,7 +1,3 @@
-#region Usings
-
-#endregion
-
 namespace ImageManager.Services;
 
 /// <summary>

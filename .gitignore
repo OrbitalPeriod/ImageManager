@@ -288,7 +288,7 @@ __pycache__/
 *.btm.cs
 *.odx.cs
 *.xsd.cs
-.env
+.secrets.env
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
