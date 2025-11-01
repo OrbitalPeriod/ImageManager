@@ -17,7 +17,8 @@
     env_file:
       - "./.env"
       - "./.docker.env"
-      - "./.secrets.env"
+      - path: "./.secrets.env"
+        required: false
     volumes:
       - images:/Images
     depends_on:
