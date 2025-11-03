@@ -4,7 +4,7 @@ REGISTRY = registry.orbitalperiod.net
 .PHONY: build push all
 
 build:
-	docker-compose build
+	DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose build
 
 push:
 	@for img in $(IMAGES); do \

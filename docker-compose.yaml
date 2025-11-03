@@ -13,7 +13,7 @@
     build:
       context: ./ImageManager/ 
     ports:
-      - "8173:8080"
+      - "8174:8080"
     env_file:
       - "./.env"
       - "./.docker.env"
@@ -47,8 +47,6 @@
     env_file:
       - "./.env"
       - "./.docker.env"
-    ports:
-      - "8081:80"
     networks: ["imagemanager_network"]
 
 networks:
