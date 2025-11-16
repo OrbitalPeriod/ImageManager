@@ -7,7 +7,7 @@ public class RemoteSyncService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<RemoteSyncService> _logger;
-    
+
     /// <summary>
     /// Creates a new instance of <see cref="RemoteSyncService"/>.
     /// </summary>
@@ -21,12 +21,12 @@ public class RemoteSyncService : BackgroundService
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
-    
+
     /// <summary>
     /// How often the sync should run.
     /// </summary>
     private static readonly TimeSpan SyncInterval = TimeSpan.FromMinutes(30);
-    
+
     /// <summary>
     /// Main execution loop. Runs until the application is stopped.
     /// </summary>
@@ -43,7 +43,7 @@ public class RemoteSyncService : BackgroundService
                 await using var scope = _scopeFactory.CreateAsyncScope();
                 var platformTokenRepository = scope.ServiceProvider.GetRequiredService<IPlatformTokenRepository>();
                 var pixivImageImportManager = scope.ServiceProvider.GetRequiredService<IPixivImageImportManager>();
-                
+
                 //Run import for all tokens
                 var tokens = await platformTokenRepository.GetAllAsync();
                 foreach (var platformToken in tokens)
@@ -55,7 +55,7 @@ public class RemoteSyncService : BackgroundService
                             break;
                     }
                 }
-                
+
                 _logger.LogInformation("Image sync completed at {Timestamp}.", DateTime.UtcNow);
             }
             catch (Exception ex) when (!(ex is OperationCanceledException))
@@ -78,6 +78,6 @@ public class RemoteSyncService : BackgroundService
 
         _logger.LogInformation("RemoteSyncService stopped.");
     }
-    
+
 }
 

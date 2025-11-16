@@ -43,5 +43,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Tag>().HasKey(i => i.Id);
         builder.Entity<UserOwnedImage>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Entity<UserOwnedImage>().HasKey(i => i.Id);
+
+        builder.Entity<Image>().HasOne(i => i.DownloadedImage).WithOne(i => i.Image).IsRequired(false)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

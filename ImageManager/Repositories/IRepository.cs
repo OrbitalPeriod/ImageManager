@@ -79,7 +79,6 @@ public class EfRepository<TEntity, TKey>(ApplicationDbContext ctx) : IRepository
     public async Task AddAsync(TEntity entity)
     {
         DbContext.Set<TEntity>().Add(entity);
-        await DbContext.SaveChangesAsync();
     }
 
     // Note: Update does not persist changes automatically.
@@ -89,7 +88,6 @@ public class EfRepository<TEntity, TKey>(ApplicationDbContext ctx) : IRepository
     public async Task Delete(TEntity entity)
     {
         DbContext.Set<TEntity>().Remove(entity);
-        await DbContext.SaveChangesAsync();
     }
 
     public async Task Delete(TKey id)

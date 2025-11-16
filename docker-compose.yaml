@@ -24,7 +24,7 @@
     depends_on:
       database:
         condition: service_healthy
-    networks: ["imagemanager_network", "network"]
+    networks: ["imagemanager_network"]
 
   database:
     image: postgres:latest
@@ -52,8 +52,6 @@
 networks:
   imagemanager_network:
     driver: bridge
-  network:
-    external: true
 
 volumes:
   db-data:

@@ -93,9 +93,6 @@ namespace ImageManager.Migrations
                     b.Property<int>("AgeRating")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("DownloadedImageId")
-                        .HasColumnType("integer");
-
                     b.Property<bool>("HasThumbnail")
                         .HasColumnType("boolean");
 
@@ -446,7 +443,8 @@ namespace ImageManager.Migrations
                 {
                     b.HasOne("ImageManager.Data.Models.Image", "Image")
                         .WithOne("DownloadedImage")
-                        .HasForeignKey("ImageManager.Data.Models.DownloadedImage", "ImageId");
+                        .HasForeignKey("ImageManager.Data.Models.DownloadedImage", "ImageId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("ImageManager.Data.Models.User", null)
                         .WithMany("DownloadedImages")

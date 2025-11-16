@@ -20,6 +20,7 @@ DotNetEnv.Env.Load("../.secrets.env");
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 #region Database & Identity Configuration
 var connectionString = builder.Configuration["SQL_CONNECTION_STRING"]
                        ?? throw new Exception("SQL_CONNECTION_STRING is required");
@@ -70,6 +71,7 @@ builder.Services.AddScoped<IImageDetailService, ImageDetailService>();
 builder.Services.AddScoped<IImageQueryService, ImageQueryService>();
 builder.Services.AddScoped<IUploadImageService, UploadImageService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+builder.Services.AddScoped<ICharacterQueryService, CharacterQueryService>();
 
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IUserInfoService, UserInfoService>();
@@ -136,6 +138,7 @@ if (app.Environment.IsDevelopment())
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "UUAI API V1");
     });
+
 
     // Seed the database on startup when in development mode
     using var scope = app.Services.CreateScope();

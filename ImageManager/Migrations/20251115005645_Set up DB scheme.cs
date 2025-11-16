@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     /// <inheritdoc />
-    public partial class Killingmyselfpart3 : Migration
+    public partial class SetupDBscheme : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -78,7 +78,7 @@ namespace ImageManager.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "gen_random_uuid()"),
                     Hash = table.Column<decimal>(type: "numeric(20,0)", nullable: false),
                     AgeRating = table.Column<int>(type: "integer", nullable: false),
-                    DownloadedImageId = table.Column<int>(type: "integer", nullable: true)
+                    HasThumbnail = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {

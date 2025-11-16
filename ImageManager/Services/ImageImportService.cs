@@ -1,6 +1,7 @@
 #region Usings
 
 using CoenM.ImageHash.HashAlgorithms;
+using ImageManager.Data;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -71,6 +72,7 @@ public class ImageImportService(
         // --------------------------------------------------------------------
         // 2️⃣  Resolve Tag & Character entities from the repositories
         // --------------------------------------------------------------------
+        
         var tagEntities = await tagRepository.GetByStringsAsync(imageData.GeneralTags);
         var characterEntities = await characterRepository.GetByNamesAsync(imageData.CharacterTags);
 
@@ -79,7 +81,8 @@ public class ImageImportService(
         // --------------------------------------------------------------------
         using var ms = new MemoryStream(imageBytes);
         using var img = await SixLabors.ImageSharp.Image.LoadAsync<Rgba32>(ms);
-        ulong hash = _hash.Hash(img.Clone());
+        using var hashImg = img.Clone();
+        ulong hash = _hash.Hash(hashImg);
 
         // --------------------------------------------------------------------
         // 4️⃣  Look for an existing image by hash via the repository
@@ -129,7 +132,6 @@ public class ImageImportService(
                 Tags = tagEntities.ToList(),
                 Characters = characterEntities.ToList(),
                 AgeRating = (AgeRating)imageData.Rating,
-                DownloadedImageId = null,
                 HasThumbnail = true,
             };
 

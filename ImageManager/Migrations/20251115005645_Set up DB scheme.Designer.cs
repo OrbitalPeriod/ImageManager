@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251030202347_Added hasThumbnail variable")]
-    partial class AddedhasThumbnailvariable
+    [Migration("20251115005645_Set up DB scheme")]
+    partial class SetupDBscheme
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -94,9 +94,6 @@ namespace ImageManager.Migrations
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<int>("AgeRating")
-                        .HasColumnType("integer");
-
-                    b.Property<int?>("DownloadedImageId")
                         .HasColumnType("integer");
 
                     b.Property<bool>("HasThumbnail")

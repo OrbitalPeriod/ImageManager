@@ -15,7 +15,6 @@ namespace ImageManager.Services.ShareToken;
 /// for images owned by the calling user.
 /// </summary>
 public class ShareTokenService(
-    ApplicationDbContext dbContext,
     IUserOwnedImageRepository userOwnedImageRepository,
     IShareTokenRepository shareTokenRepository) : IShareTokenService
 {

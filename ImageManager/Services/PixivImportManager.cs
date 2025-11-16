@@ -33,106 +33,106 @@ public class PixivImportManager(
     ITransactionService transactionService) : IPixivImageImportManager
 {
     /// <inheritdoc />
-public async Task ImportAsync(PlatformToken token)
-{
-    if (token.Platform != Platform.Pixiv)
-        throw new ArgumentException("Token must be Pixiv", nameof(token));
-
-    try
+    public async Task ImportAsync(PlatformToken token)
     {
-        logger.LogInformation("Starting Pixiv import for user {UserName} ({UserId})", 
-            token.User.UserName, token.UserId);
-
-        var bookmarks = await pixivService.GetLikedBookmarks(token.PlatformUserId, token.Token, token.CheckPrivate);
-
-        if (!bookmarks.Any())
-        {
-            logger.LogInformation("No new bookmarks found for user {UserName} ({UserId})",
-                token.User.UserName, token.UserId);
-            return;
-        }
-
-        var illustIds = bookmarks.Select(x => x.Id).ToArray();
-
-        // Check which illustrations are already downloaded
-        var existingDownloads = await downloadedImageRepository.ListAsync(
-            di => illustIds.Contains(di.PlatformImageId));
-
-        var downloadedIds = existingDownloads.Select(di => di.PlatformImageId).ToHashSet();
-
-        var toDownload = bookmarks.Where(ill => !downloadedIds.Contains(ill.Id)).ToList();
-
-        logger.LogInformation("Found {Count} new illustrations for user {UserName} ({UserId})",
-            toDownload.Count, token.User.UserName, token.UserId);
-
-        int successCount = 0;
-        int failCount = 0;
-
-        foreach (var illustration in toDownload)
-        {
-            try
-            {
-                await DownloadImage(token.User, illustration);
-                successCount++;
-            }
-            catch (Exception ex)
-            {
-                failCount++;
-                logger.LogError(ex,
-                    "Failed to download or import illustration {IllustrationId} ({Title}) for user {UserName} ({UserId})",
-                    illustration.Id, illustration.Title, token.User.UserName, token.UserId);
-            }
-        }
-
-        logger.LogInformation(
-            "Completed downloading Pixiv illustrations for user {UserName} ({UserId}): {SuccessCount} succeeded, {FailCount} failed",
-            token.User.UserName, token.UserId, successCount, failCount);
-
-        // Handle existing illustrations not yet linked to this user
-        var existingIds = illustIds.Except(downloadedIds).ToArray();
-
-        List<UserOwnedImage> newUserLinks = new();
+        if (token.Platform != Platform.Pixiv)
+            throw new ArgumentException("Token must be Pixiv", nameof(token));
 
         try
         {
-            var notAdded = await downloadedImageRepository.ListAsync(
-                di => existingIds.Contains(di.PlatformImageId) &&
-                      di.Image.UserOwnedImages.All(uoi => uoi.UserId != token.UserId));
+            logger.LogInformation("Starting Pixiv import for user {UserName} ({UserId})",
+                token.User.UserName, token.UserId);
 
-            foreach (var existingImage in notAdded)
+            var bookmarks = await pixivService.GetLikedBookmarks(token.PlatformUserId, token.Token, token.CheckPrivate);
+
+            if (!bookmarks.Any())
             {
-                newUserLinks.Add(new UserOwnedImage
-                {
-                    UserId = token.UserId,
-                    ImageId = existingImage.ImageId,
-                    Publicity = token.User.DefaultPublicity
-                });
+                logger.LogInformation("No new bookmarks found for user {UserName} ({UserId})",
+                    token.User.UserName, token.UserId);
+                return;
             }
 
-            if (newUserLinks.Any())
-                foreach (var userLink in newUserLinks)
+            var illustIds = bookmarks.Select(x => x.Id).ToArray();
+
+            // Check which illustrations are already downloaded
+            var existingDownloads = await downloadedImageRepository.ListAsync(
+                di => illustIds.Contains(di.PlatformImageId));
+
+            var downloadedIds = existingDownloads.Select(di => di.PlatformImageId).ToHashSet();
+
+            var toDownload = bookmarks.Where(ill => !downloadedIds.Contains(ill.Id)).ToList();
+
+            logger.LogInformation("Found {Count} new illustrations for user {UserName} ({UserId})",
+                toDownload.Count, token.User.UserName, token.UserId);
+
+            int successCount = 0;
+            int failCount = 0;
+
+            foreach (var illustration in toDownload)
+            {
+                try
                 {
-                    await userOwnedImageRepository.AddAsync(userLink);
+                    await DownloadImage(token.User, illustration);
+                    successCount++;
                 }
-            
-            logger.LogInformation("Added {Count} existing illustrations for user {UserName} ({UserId})",
-                newUserLinks.Count, token.User.UserName, token.UserId);
+                catch (Exception ex)
+                {
+                    failCount++;
+                    logger.LogError(ex,
+                        "Failed to download or import illustration {IllustrationId} ({Title}) for user {UserName} ({UserId})",
+                        illustration.Id, illustration.Title, token.User.UserName, token.UserId);
+                }
+            }
+
+            logger.LogInformation(
+                "Completed downloading Pixiv illustrations for user {UserName} ({UserId}): {SuccessCount} succeeded, {FailCount} failed",
+                token.User.UserName, token.UserId, successCount, failCount);
+
+            // Handle existing illustrations not yet linked to this user
+            var existingIds = illustIds.Except(downloadedIds).ToArray();
+
+            List<UserOwnedImage> newUserLinks = new();
+
+            try
+            {
+                var notAdded = await downloadedImageRepository.ListAsync(
+                    di => existingIds.Contains(di.PlatformImageId) &&
+                          di.Image.UserOwnedImages.All(uoi => uoi.UserId != token.UserId));
+
+                foreach (var existingImage in notAdded)
+                {
+                    newUserLinks.Add(new UserOwnedImage
+                    {
+                        UserId = token.UserId,
+                        ImageId = existingImage.ImageId,
+                        Publicity = token.User.DefaultPublicity
+                    });
+                }
+
+                if (newUserLinks.Any())
+                    foreach (var userLink in newUserLinks)
+                    {
+                        await userOwnedImageRepository.AddAsync(userLink);
+                    }
+
+                logger.LogInformation("Added {Count} existing illustrations for user {UserName} ({UserId})",
+                    newUserLinks.Count, token.User.UserName, token.UserId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex,
+                    "Failed to link existing illustrations for user {UserName} ({UserId})",
+                    token.User.UserName, token.UserId);
+            }
         }
         catch (Exception ex)
         {
-            logger.LogError(ex,
-                "Failed to link existing illustrations for user {UserName} ({UserId})",
+            logger.LogCritical(ex,
+                "Unexpected error during Pixiv import for user {UserName} ({UserId})",
                 token.User.UserName, token.UserId);
+            throw;
         }
     }
-    catch (Exception ex)
-    {
-        logger.LogCritical(ex,
-            "Unexpected error during Pixiv import for user {UserName} ({UserId})",
-            token.User.UserName, token.UserId);
-        throw; 
-    }
-}
 
 
     /// <summary>
@@ -141,7 +141,6 @@ public async Task ImportAsync(PlatformToken token)
     private async Task DownloadImage(User user, IllustInfo illustration)
     {
         await using var transaction = await transactionService.BeginTransactionAsync();
-
         try
         {
             byte[] imageBytes;
@@ -174,12 +173,14 @@ public async Task ImportAsync(PlatformToken token)
                 ImageId = imageId.Value
             });
 
+            await transactionService.SaveChangesAsync();
             await transaction.CommitAsync();
             logger.LogInformation("Successfully downloaded and imported illustration {IllustrationId}", illustration.Id);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Unexpected error while processing illustration {IllustrationId}", illustration.Id);
+            await transactionService.SaveChangesAsync();
             await transaction.RollbackAsync();
         }
     }

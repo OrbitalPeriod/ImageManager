@@ -32,21 +32,16 @@ public interface IUploadImageService
 /// </summary>
 public class UploadImageService(
     IImageImportService imageImportService,
-    ApplicationDbContext dbContext) : IUploadImageService
+    ITransactionService transactionService) : IUploadImageService
 {
     /// <inheritdoc />
     public async Task<Guid?> UploadAsync(IFormFile file, Publicity? publicity, User user)
     {
         if (file == null) throw new ArgumentNullException(nameof(file));
         if (user == null) throw new ArgumentNullException(nameof(user));
-
-        // Begin a transaction so that the import and database persistence
-        // are atomic – either both succeed or neither is committed.
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
-
-        try
+        
+        return await transactionService.UseTransactionAsync(async () =>
         {
-            // Read the uploaded file into a byte array.
             byte[] imageBytes;
             await using (var ms = new MemoryStream())
             {
@@ -58,28 +53,18 @@ public class UploadImageService(
             var resolvedPublicity = publicity ?? user.DefaultPublicity;
 
             // Delegate the actual import logic to the dedicated service.
+            
             var imageId = await imageImportService.ImportImage(
                 imageBytes,
                 resolvedPublicity,
                 user.Id);
+            
+            if (imageId != null) return imageId;
+            
+            throw new Exception("Import failed");
+            return null;
 
-            // If the import failed, roll back and return null.
-            if (imageId == null)
-            {
-                await transaction.RollbackAsync();
-                return null;
-            }
-
-            // Commit the transaction on success.
-            await transaction.CommitAsync();
-            return imageId;
-        }
-        catch
-        {
-            // Ensure the database state remains consistent in case of an exception.
-            await transaction.RollbackAsync();
-            throw;
-        }
+        });
     }
 }
 

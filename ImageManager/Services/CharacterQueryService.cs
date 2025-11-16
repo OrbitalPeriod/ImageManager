@@ -73,19 +73,26 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
         // Retrieve the requested page of character counts
         var characters = await baseQuery
             .SelectMany(i => i.Image.Characters)
-            .GroupBy(c => new { c.Id, c.Name })
-            .Select(g => new CharacterController.GetCharacterResponse(
+            .Select(c => new
+            {
+                Id = c.Id,
+                Name = c.Name
+            })
+            .GroupBy(x => new { x.Id, x.Name })
+            .Select(g => new { 
                 g.Key.Id,
                 g.Key.Name,
-                g.Count()))
+                Count = g.Count(),
+            })
             .OrderByDescending(x => x.Count)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .Select(x => new CharacterController.GetCharacterResponse(x.Id, x.Name, x.Count))
+            .ToArrayAsync();
 
         return new PaginatedResponse<CharacterController.GetCharacterResponse>
         {
-            Data = characters.ToArray(),
+            Data = characters,
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,

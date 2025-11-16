@@ -75,7 +75,7 @@ public class ImageRepository(ApplicationDbContext dbContext)
     /// <returns>The matching <see cref="Image"/> or <c>null</c> if none found.</returns>
     public async Task<Image?> GetByHashAsync(ulong hash)
     {
-        return await dbContext.Images.FirstOrDefaultAsync(i => i.Hash == hash);
+        return await dbContext.Images.Include(i => i.UserOwnedImages).FirstOrDefaultAsync(i => i.Hash == hash);
     }
 
     /// <summary>

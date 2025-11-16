@@ -42,7 +42,7 @@ public sealed class TaggerService : ITaggerService
 
         var channelOptions = new GrpcChannelOptions
         {
-            MaxReceiveMessageSize = 124 * 1024 * 1024, 
+            MaxReceiveMessageSize = 124 * 1024 * 1024,
             MaxSendMessageSize = 124 * 1024 * 1024
         };
 

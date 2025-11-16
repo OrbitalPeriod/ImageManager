@@ -14,8 +14,6 @@ namespace ImageManager.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/characters")]
-// Uncomment the following line if you want to enforce authentication:
-// [Authorize]
 public class CharacterController(
     UserManager<User> userManager,
     ILogger<CharacterController> logger,
@@ -47,16 +45,6 @@ public class CharacterController(
 
         var user = await userManager.GetUserAsync(HttpContext.User);
 
-        if (user == null)
-        {
-            logger.LogWarning("Unauthenticated request to GetCharacters");
-            return Unauthorized();
-        }
-
-        logger.LogInformation(
-            "GetCharacters called by {UserId} – token={Token}, page={Page}, pageSize={PageSize}",
-            user.Id, token, page, pageSize);
-
         var result = await queryService.GetCharactersAsync(user, token, page, pageSize);
         return Ok(result);
     }
@@ -76,16 +64,6 @@ public class CharacterController(
         [FromQuery, Range(1, 200)] int pageSize = 20)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
-
-        if (user == null)
-        {
-            logger.LogWarning("Unauthenticated request to SearchCharacters");
-            return Unauthorized();
-        }
-
-        logger.LogInformation(
-            "SearchCharacters called by {UserId} – query='{Query}', token={Token}, page={Page}, pageSize={PageSize}",
-            user.Id, q, token, page, pageSize);
 
         var result = await queryService.SearchAsync(user, token, q, page, pageSize);
         return Ok(result);

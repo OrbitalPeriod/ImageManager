@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace ImageManager.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251019132308_Killing myself part 4")]
-    partial class Killingmyselfpart4
+    [Migration("20251115014707_Set up cascading deletes")]
+    partial class Setupcascadingdeletes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -96,8 +96,8 @@ namespace ImageManager.Migrations
                     b.Property<int>("AgeRating")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("DownloadedImageId")
-                        .HasColumnType("integer");
+                    b.Property<bool>("HasThumbnail")
+                        .HasColumnType("boolean");
 
                     b.Property<decimal>("Hash")
                         .HasColumnType("numeric(20,0)");
@@ -175,7 +175,8 @@ namespace ImageManager.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -445,7 +446,8 @@ namespace ImageManager.Migrations
                 {
                     b.HasOne("ImageManager.Data.Models.Image", "Image")
                         .WithOne("DownloadedImage")
-                        .HasForeignKey("ImageManager.Data.Models.DownloadedImage", "ImageId");
+                        .HasForeignKey("ImageManager.Data.Models.DownloadedImage", "ImageId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("ImageManager.Data.Models.User", null)
                         .WithMany("DownloadedImages")

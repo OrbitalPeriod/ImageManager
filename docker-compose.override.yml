@@ -3,11 +3,13 @@ services:
     networks: ["imagemanager_network"]
     ports:
       - "50051:50051"
+    profiles: ["Tagger"]
 
   imagemanager:
     networks: ["imagemanager_network"]
     ports:
       - "8080:8080"
+    profiles: ["Backend"]
 
   database:
     networks: ["imagemanager_network"]
@@ -16,3 +18,4 @@ services:
 
   frontend:
     networks: ["imagemanager_network"]
+    profiles: ["Frontend"]

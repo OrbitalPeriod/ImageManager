@@ -22,7 +22,8 @@ public class AuthController(UserManager<User> userManager,
     /// </summary>
     public record RegisterRequest(
         [Required, EmailAddress] string Email,
-        [Required, MinLength(6)] string Password);
+        [Required, MinLength(6)] string Password,
+        [Required, MinLength(6)] string Username);
 
     /// <summary>
     /// Response returned when registration succeeds.
@@ -33,7 +34,7 @@ public class AuthController(UserManager<User> userManager,
     /// Payload for logging in.
     /// </summary>
     public record LoginRequest(
-        [Required, EmailAddress] string Email,
+        [Required] string Username,
         [Required, MinLength(6)] string Password);
 
     /// <summary>Simple error wrapper.</summary>
@@ -50,7 +51,7 @@ public class AuthController(UserManager<User> userManager,
     [HttpPost("register")]
     public async Task<ActionResult<RegisterResponse>> Register([FromBody] RegisterRequest request)
     {
-        var user = new User { UserName = request.Email, Email = request.Email };
+        var user = new User { UserName = request.Username, Email = request.Email };
         var result = await userManager.CreateAsync(user, request.Password);
 
         if (result.Succeeded)
@@ -76,20 +77,20 @@ public class AuthController(UserManager<User> userManager,
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await signInManager.PasswordSignInAsync(
-            request.Email,
+            request.Username,
             request.Password,
             isPersistent: false,          // No persistent cookie for API
             lockoutOnFailure: false);
 
         if (result.Succeeded)
         {
-            logger.LogInformation("User '{Email}' logged in successfully.", request.Email);
+            logger.LogInformation("User '{Email}' logged in successfully.", request.Username);
             return Ok(new { Message = "Login success" });
         }
 
         logger.LogWarning(
             "Login failed for {Email}. Result: {@Result}",
-            request.Email,
+            request.Username,
             result);
 
         return Unauthorized(new ErrorResponse("Login failed"));
