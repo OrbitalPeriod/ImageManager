@@ -72,6 +72,7 @@ builder.Services.AddScoped<IImageQueryService, ImageQueryService>();
 builder.Services.AddScoped<IUploadImageService, UploadImageService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICharacterQueryService, CharacterQueryService>();
+builder.Services.AddScoped<IInitialUserCreationService, InitialUserCreationService>();
 
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IUserInfoService, UserInfoService>();
@@ -143,6 +144,9 @@ if (app.Environment.IsDevelopment())
     // Seed the database on startup when in development mode
     using var scope = app.Services.CreateScope();
     DatabaseSetup.ConfigureIdentityDatabase(scope);
+    
+    var initialUserService = scope.ServiceProvider.GetRequiredService<IInitialUserCreationService>();
+    await initialUserService.AddDefaultUser();
 }
 #endregion
 
