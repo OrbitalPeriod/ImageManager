@@ -93,6 +93,9 @@ namespace ImageManager.Migrations
                     b.Property<int>("AgeRating")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("HasCompressedVersion")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("HasThumbnail")
                         .HasColumnType("boolean");
 

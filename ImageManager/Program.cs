@@ -82,8 +82,7 @@ builder.Services.AddScoped<IUserInfoService, UserInfoService>();
 builder.Services.AddSingleton<IPixivService>(_ => new PixivService(
     builder.Configuration["PIXIV_TOKEN"] ?? throw new Exception("PIXIV_TOKEN is required")));
 
-builder.Services.AddSingleton<ITaggerService>(_ => new TaggerService(
-    builder.Configuration["ANIMETAGGER_URL"] ?? throw new Exception("ANIMETAGGER_URL is required")));
+builder.Services.AddScoped<ITaggerService, TaggerService>();
 
 builder.Services.AddSingleton<IFileService>(sp =>
 {
@@ -118,10 +117,10 @@ builder.Services.AddLogging();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
+    c.SwaggerDoc("Anime Image Manager", new OpenApiInfo
     {
-        Title = "www",
-        Description = "wwwww",
+        Title = "Anime Image Manager",
+        Description = "Backend to manage and access images",
         Version = "v1"
     });
 });
@@ -137,7 +136,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "UUAI API V1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Anime Image Manager");
     });
 
 
@@ -154,7 +153,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.UseExceptionHandler("/error");
 
 app.UseCors();
 

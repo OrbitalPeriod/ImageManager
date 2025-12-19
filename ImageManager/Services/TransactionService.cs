@@ -55,7 +55,8 @@ public static class TransactionServiceExtensions
         await using var transaction = await tx.BeginTransactionAsync();
         try
         {
-            await action();                    
+            await action();
+            await tx.SaveChangesAsync();
             await transaction.CommitAsync();
         }
         catch
@@ -74,7 +75,8 @@ public static class TransactionServiceExtensions
         await using var transaction = await tx.BeginTransactionAsync();
         try
         {
-            T result = await action();         
+            T result = await action(); 
+            await tx.SaveChangesAsync();
             await transaction.CommitAsync();
             return result;
         }

@@ -18,4 +18,6 @@ public class Image : IEntity<Guid>
     public DownloadedImage? DownloadedImage { get; private set; }
 
     public required bool HasThumbnail { get; set; } = false;
+
+    public required bool HasCompressedVersion { get; set; } = false;
 }

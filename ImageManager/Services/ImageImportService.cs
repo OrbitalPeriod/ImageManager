@@ -133,6 +133,7 @@ public class ImageImportService(
                 Characters = characterEntities.ToList(),
                 AgeRating = (AgeRating)imageData.Rating,
                 HasThumbnail = true,
+                HasCompressedVersion = true,
             };
 
             await imageRepository.AddAsync(newImage);
@@ -143,7 +144,7 @@ public class ImageImportService(
             await userOwnedImageRepository.AddAsync(
                 new UserOwnedImage { ImageId = imageGuid, UserId = userId });
         }
-
+        
         return imageGuid;
     }
 }

@@ -1,6 +1,7 @@
 #region Usings
 
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
 
 #endregion
@@ -26,6 +27,13 @@ public interface IFileService
     /// <param name="id">The identifier that was returned when the image was saved.</param>
     /// <returns>The jpg byte array.</returns>
     Task<byte[]> LoadThumbnailImage(Guid id);
+    
+    /// <summary>
+    /// Loads the raw bytes of a jpg compressed image identified by its GUID
+    /// </summary>
+    /// <param name="id">The identifier that was returned when the image was saved.</param>
+    /// <returns>The jpg byte array.</returns>
+    Task<byte[]> LoadCompressedImage(Guid id);
 
     /// <summary>
     /// Persists an <see cref="Image"/> instance as a PNG file and returns the generated GUID.
@@ -33,6 +41,8 @@ public interface IFileService
     /// <param name="image">The image to be saved.</param>
     /// <returns>The GUID that can later be used with <see cref="LoadFullImage"/>.</returns>
     Task<Guid> SaveFile(Image image);
+    
+    
 }
 
 #region Implementation
@@ -60,6 +70,9 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
 
         filePath = Path.Combine(_rootDirectory, $"{id}_thumb.jpg");
         await SaveThumbnailImageAsync(image, filePath);
+        
+        filePath = Path.Combine(_rootDirectory, $"{id}_compressed.jpg");
+        await  SaveCompressedImageAsync(image, filePath);
 
         return id;
     }
@@ -85,6 +98,19 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
         await image.SaveAsJpegAsync(stream);
     }
 
+    private async Task SaveCompressedImageAsync(Image image, string path)
+    {
+        var jpegEncoder = new JpegEncoder()
+        {
+            Quality = 65
+        };
+        
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        
+        await using var stream = File.Open(path, FileMode.Create);
+        await image.SaveAsJpegAsync(stream, jpegEncoder);
+    }
+
     /// <inheritdoc />
     public async Task<byte[]> LoadFullImage(Guid id)
     {
@@ -106,6 +132,21 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
         if (!Path.Exists(filePath))
         {
             logger.LogInformation($"Thumbnail image not found: {id}, defaulting to full image");
+            return await LoadFullImage(id);
+        }
+        return await File.ReadAllBytesAsync(filePath);
+    }
+    
+    /// <inheritdoc />
+    public async Task<byte[]> LoadCompressedImage(Guid id)
+    {
+        if (id == Guid.Empty) throw new ArgumentException("ID cannot be empty.", nameof(id));
+
+        var filePath = Path.Combine(_rootDirectory, $"{id}_compressed.jpg");
+
+        if (!Path.Exists(filePath))
+        {
+            logger.LogInformation($"Compressed image not found: {id}, defaulting to full image");
             return await LoadFullImage(id);
         }
         return await File.ReadAllBytesAsync(filePath);
