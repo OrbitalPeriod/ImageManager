@@ -154,6 +154,28 @@ public class ImageController(
             return NotFound("Requested image not found.");
 
         // Return the image file
+        return await ReturnCompressed(image);
+    }
+    
+    
+    /// <summary>
+    /// Streams the raw image file to the caller.  
+    /// The MIME type is now inferred from the image record or by inspecting the file header.
+    /// </summary>
+    [HttpGet("{imageId:guid}/original")]
+    public async Task<IActionResult> GetOriginalImage(Guid imageId, [FromQuery] Guid? token)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+
+        var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
+        if (!result.Found) return NotFound();
+        if (!result.Allowed) return Forbid();
+
+        var image = result.Image;
+        if (image == null)
+            return NotFound("Requested image not found.");
+
+        // Return the image file
         return await ReturnImage(image);
     }
 
@@ -194,25 +216,33 @@ public class ImageController(
     #region Helpers
     private async Task<IActionResult> ReturnImage(Image image)
     {
-        return await ReturnImg(image, false);
+        return await ReturnImg(image, ImageType.Original);
+    }
+
+    private async Task<IActionResult> ReturnCompressed(Image image)
+    {
+        return await  ReturnImg(image, ImageType.Compressed);
     }
 
     private async Task<IActionResult> ReturnThumbnail(Image image)
     {
-        return await ReturnImg(image, true);
+        return await ReturnImg(image, ImageType.Thumbnail);
     }
     /// <summary>
     /// Loads an image from the file system and returns it as a FileResult.  
     /// Handles MIME‑type inference and I/O errors gracefully.
     /// </summary>
-    private async Task<IActionResult> ReturnImg(Image image, bool thumbnail)
+    private async Task<IActionResult> ReturnImg(Image image, ImageType imageType)
     {
         try
         {
-            byte[] fileBytes;
-            if (!thumbnail) fileBytes = await fileService.LoadFullImage(image.Id);
-            else fileBytes = await fileService.LoadThumbnailImage(image.Id);
-
+            byte[] fileBytes = imageType switch
+            {
+                ImageType.Original   => await fileService.LoadFullImage(image.Id),
+                ImageType.Compressed => await fileService.LoadCompressedImage(image.Id),
+                ImageType.Thumbnail  => await fileService.LoadThumbnailImage(image.Id),
+                _ => throw new ArgumentOutOfRangeException(nameof(imageType), imageType, null)
+            };
 
             if (fileBytes == null || fileBytes.Length == 0) return NotFound("Requested image not found.");
 

@@ -35,10 +35,13 @@ public sealed class TaggerService : ITaggerService
     /// </summary>
     /// <param name="serviceUrl">The base URL of the gRPC service (e.g. https://localhost:5001).</param>
     /// <exception cref="ArgumentException"><paramref name="serviceUrl"/> is null, empty or whitespace.</exception>
-    public TaggerService(string serviceUrl)
+    public TaggerService(IConfiguration configuration, ILogger<TaggerService> logger)
     {
+        var serviceUrl = configuration["ANIMETAGGER_URL"];
+        
         if (string.IsNullOrWhiteSpace(serviceUrl))
             throw new ArgumentException("The gRPC service URL cannot be null or empty.", nameof(serviceUrl));
+        logger.LogInformation("Starting gRPC service with url {serviceUrl}", serviceUrl);
 
         var channelOptions = new GrpcChannelOptions
         {
