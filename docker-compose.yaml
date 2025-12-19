@@ -32,7 +32,7 @@
       - "./.env"
       - "./.docker.env"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql
     networks: ["imagemanager_network"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgresql"]
