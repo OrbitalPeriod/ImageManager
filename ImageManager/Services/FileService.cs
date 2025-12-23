@@ -27,7 +27,7 @@ public interface IFileService
     /// <param name="id">The identifier that was returned when the image was saved.</param>
     /// <returns>The jpg byte array.</returns>
     Task<byte[]> LoadThumbnailImage(Guid id);
-    
+
     /// <summary>
     /// Loads the raw bytes of a jpg compressed image identified by its GUID
     /// </summary>
@@ -41,8 +41,8 @@ public interface IFileService
     /// <param name="image">The image to be saved.</param>
     /// <returns>The GUID that can later be used with <see cref="LoadFullImage"/>.</returns>
     Task<Guid> SaveFile(Image image);
-    
-    
+
+
 }
 
 #region Implementation
@@ -70,9 +70,9 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
 
         filePath = Path.Combine(_rootDirectory, $"{id}_thumb.jpg");
         await SaveThumbnailImageAsync(image, filePath);
-        
+
         filePath = Path.Combine(_rootDirectory, $"{id}_compressed.jpg");
-        await  SaveCompressedImageAsync(image, filePath);
+        await SaveCompressedImageAsync(image, filePath);
 
         return id;
     }
@@ -104,9 +104,9 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
         {
             Quality = 65
         };
-        
+
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        
+
         await using var stream = File.Open(path, FileMode.Create);
         await image.SaveAsJpegAsync(stream, jpegEncoder);
     }
@@ -136,7 +136,7 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
         }
         return await File.ReadAllBytesAsync(filePath);
     }
-    
+
     /// <inheritdoc />
     public async Task<byte[]> LoadCompressedImage(Guid id)
     {

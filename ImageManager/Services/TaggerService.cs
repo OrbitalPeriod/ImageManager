@@ -38,7 +38,7 @@ public sealed class TaggerService : ITaggerService
     public TaggerService(IConfiguration configuration, ILogger<TaggerService> logger)
     {
         var serviceUrl = configuration["ANIMETAGGER_URL"];
-        
+
         if (string.IsNullOrWhiteSpace(serviceUrl))
             throw new ArgumentException("The gRPC service URL cannot be null or empty.", nameof(serviceUrl));
         logger.LogInformation("Starting gRPC service with url {serviceUrl}", serviceUrl);

@@ -10,7 +10,7 @@ public interface IInitialUserCreationService
     public Task AddDefaultUser();
 }
 
-public class InitialUserCreationService(UserManager<User>  userManager, ApplicationDbContext dbContext) : IInitialUserCreationService
+public class InitialUserCreationService(UserManager<User> userManager, ApplicationDbContext dbContext) : IInitialUserCreationService
 {
     public async Task AddDefaultUser()
     {

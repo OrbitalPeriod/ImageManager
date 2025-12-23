@@ -75,4 +75,28 @@ public class PlatformTokenController(
     }
 
     #endregion
+
+    #region Run
+
+    /// <summary>
+    /// Run the sync service on a token
+    /// </summary>
+    /// <param name="id">Identifier of token</param>
+    /// <returns></returns>
+    [Authorize]
+    [HttpPost("run/{id:Guid}")]
+    public async Task<IActionResult> RunPlatformToken(Guid id)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+        if (user == null) return Unauthorized();
+        var result = await tokenService.QueueAsync(id, user);
+        return result switch
+        {
+            QueueResult.Ok => Ok(),
+            QueueResult.Forbidden => Forbid(),
+            QueueResult.NotFound => NotFound(),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+    }
+    #endregion
 }

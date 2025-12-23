@@ -79,7 +79,8 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
                 Name = c.Name
             })
             .GroupBy(x => new { x.Id, x.Name })
-            .Select(g => new { 
+            .Select(g => new
+            {
                 g.Key.Id,
                 g.Key.Name,
                 Count = g.Count(),

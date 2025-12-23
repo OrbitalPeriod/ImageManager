@@ -1,5 +1,6 @@
 #region Usings
 
+using System.Threading.Channels;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using ImageManager.Data;
@@ -11,7 +12,7 @@ using ImageManager.Services.Tags;
 using ImageManager.Services.UserInfo;
 using Microsoft.AspNetCore.Identity;
 using ImageManager.Extensions;
-
+using ImageManager.Workers;
 using User = ImageManager.Data.Models.User;
 #endregion
 
@@ -56,6 +57,16 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 #endregion
 
+#region Channels
+
+builder.Services.AddSingleton(Channel.CreateBounded<PlatformSyncRequest>(new BoundedChannelOptions(1000)
+{
+    FullMode = BoundedChannelFullMode.Wait
+}));
+
+#endregion
+
+
 #region Repository Registrations
 builder.Services.AddScoped<ICharacterRepository, CharacterRepository>();
 builder.Services.AddScoped<IDownloadedImageRepository, DownloadedImageRepository>();
@@ -97,8 +108,9 @@ builder.Services.AddScoped<IPixivImageImportManager, PixivImportManager>();
 builder.Services.AddScoped<IImageImportService, ImageImportService>();
 builder.Services.AddScoped<IPlatformTokenService, PlatformTokenService>();
 
-// Runs the Pixiv sync loop in the background
+// Runs the RemoteSync loop in the background
 builder.Services.AddHostedService<RemoteSyncService>();
+builder.Services.AddHostedService<RemoteSyncQueuingService>();
 #endregion
 
 #region Middleware & API Setup
@@ -117,7 +129,7 @@ builder.Services.AddLogging();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("Anime Image Manager", new OpenApiInfo
+    c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Anime Image Manager",
         Description = "Backend to manage and access images",
@@ -143,7 +155,7 @@ if (app.Environment.IsDevelopment())
     // Seed the database on startup when in development mode
     using var scope = app.Services.CreateScope();
     DatabaseSetup.ConfigureIdentityDatabase(scope);
-    
+
     var initialUserService = scope.ServiceProvider.GetRequiredService<IInitialUserCreationService>();
     await initialUserService.AddDefaultUser();
 }

@@ -1,8 +1,11 @@
 #region Usings
 
+using System.Threading.Channels;
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
+using ImageManager.Workers;
+
 #endregion
 
 namespace ImageManager.Services.PlatformTokens;
@@ -11,7 +14,7 @@ namespace ImageManager.Services.PlatformTokens;
 /// Concrete implementation of <see cref="IPlatformTokenService"/> that uses an
 /// <see cref="IPlatformTokenRepository"/> to persist token data.
 /// </summary>
-public class PlatformTokenService(IPlatformTokenRepository platformTokenRepository, ApplicationDbContext dbContext) : IPlatformTokenService
+public class PlatformTokenService(IPlatformTokenRepository platformTokenRepository, Channel<PlatformSyncRequest> platformSyncRequestChannel, ApplicationDbContext dbContext) : IPlatformTokenService
 {
     #region Add
 
@@ -37,6 +40,8 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
         await platformTokenRepository.AddAsync(token);
 
         await dbContext.SaveChangesAsync();
+
+        await platformSyncRequestChannel.Writer.WriteAsync(new PlatformSyncRequest(token.Id));
     }
 
     #endregion
@@ -83,5 +88,23 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
         return DeleteResult.Deleted;
     }
 
+
+
     #endregion
+
+    #region Queue
+
+    /// <inheritdoc/>
+    public async Task<QueueResult> QueueAsync(Guid id, User user)
+    {
+        var platformToken = await platformTokenRepository.GetByIdAsync(id);
+        if (platformToken == null) return QueueResult.NotFound;
+        if (platformToken.UserId != user.Id) return QueueResult.Forbidden;
+
+        await platformSyncRequestChannel.Writer.WriteAsync(new PlatformSyncRequest(platformToken.Id));
+        return QueueResult.Ok;
+    }
+
+    #endregion
+
 }

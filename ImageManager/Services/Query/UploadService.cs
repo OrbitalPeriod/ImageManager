@@ -39,7 +39,7 @@ public class UploadImageService(
     {
         if (file == null) throw new ArgumentNullException(nameof(file));
         if (user == null) throw new ArgumentNullException(nameof(user));
-        
+
         return await transactionService.UseTransactionAsync(async () =>
         {
             byte[] imageBytes;
@@ -53,14 +53,14 @@ public class UploadImageService(
             var resolvedPublicity = publicity ?? user.DefaultPublicity;
 
             // Delegate the actual import logic to the dedicated service.
-            
+
             var imageId = await imageImportService.ImportImage(
                 imageBytes,
                 resolvedPublicity,
                 user.Id);
-            
+
             if (imageId != null) return imageId;
-            
+
             throw new Exception("Import failed");
             return null;
 

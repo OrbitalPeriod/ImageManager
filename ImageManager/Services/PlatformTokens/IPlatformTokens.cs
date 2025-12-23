@@ -38,6 +38,11 @@ namespace ImageManager.Services.PlatformTokens
     /// </summary>
     public enum DeleteResult { NotFound, Forbidden, Deleted }
 
+    /// <summary>
+    /// Indicates the outcome of a Queue operation.
+    /// </summary>
+    public enum QueueResult { NotFound, Forbidden, Ok }
+
     #endregion
 
     #region Service contract
@@ -63,6 +68,14 @@ namespace ImageManager.Services.PlatformTokens
         /// </summary>
         /// <returns>A <see cref="DeleteResult"/> indicating whether the operation succeeded.</returns>
         Task<DeleteResult> DeleteTokenAsync(Guid id, User user);
+
+        /// <summary>
+        /// Queues up a PlatformToken of user to be synced
+        /// </summary>
+        /// <param name="id">Id of token</param>
+        /// <param name="user">user who owns the token</param>
+        /// <returns></returns>
+        Task<QueueResult> QueueAsync(Guid id, User user);
     }
 
     #endregion

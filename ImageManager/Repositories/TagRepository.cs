@@ -56,7 +56,7 @@ public class TagRepository(ApplicationDbContext dbContext)
 
             result.Add(tag);
         }
-        
+
         return result;
     }
 

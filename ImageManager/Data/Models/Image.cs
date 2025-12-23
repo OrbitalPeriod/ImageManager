@@ -14,7 +14,7 @@ public class Image : IEntity<Guid>
 
     public ICollection<Tag> Tags { get; set; } = [];
     public ICollection<Character> Characters { get; init; } = [];
-    
+
     public DownloadedImage? DownloadedImage { get; private set; }
 
     public required bool HasThumbnail { get; set; } = false;

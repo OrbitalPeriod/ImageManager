@@ -166,3 +166,8 @@ public interface IUserOwnedImageRepository : IRepository<UserOwnedImage, Guid>
     IQueryable<UserOwnedImage> AccessibleImages(User? user, Guid? token);
     IQueryable<UserOwnedImage> AccessibleImages(string? user, Guid? token);
 }
+
+public interface IPlatformSyncLogRepository : IRepository<PlatformSyncLog, Guid>
+{
+
+}

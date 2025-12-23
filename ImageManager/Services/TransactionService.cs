@@ -22,21 +22,21 @@ public interface ITransactionService
 /// </summary>
 public class TransactionService(ApplicationDbContext context) : ITransactionService
 {
-    
+
     public Task SaveChangesAsync() => context.SaveChangesAsync();
     public Task SaveChangesAsync(CancellationToken cancellationToken) => context.SaveChangesAsync(cancellationToken);
 
     public async Task<IDbContextTransaction> BeginTransactionAsync()
     {
-       
+
         var existing = context.Database.CurrentTransaction;
         if (existing != null)
-            return existing;          
+            return existing;
 
         // Otherwise start a brand‑new transaction
         return await context.Database.BeginTransactionAsync();
     }
-    
+
     public IDbContextTransaction? CurrentTransaction => context.Database.CurrentTransaction;
 }
 
@@ -75,7 +75,7 @@ public static class TransactionServiceExtensions
         await using var transaction = await tx.BeginTransactionAsync();
         try
         {
-            T result = await action(); 
+            T result = await action();
             await tx.SaveChangesAsync();
             await transaction.CommitAsync();
             return result;

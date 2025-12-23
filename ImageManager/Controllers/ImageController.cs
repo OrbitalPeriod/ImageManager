@@ -156,8 +156,8 @@ public class ImageController(
         // Return the image file
         return await ReturnCompressed(image);
     }
-    
-    
+
+
     /// <summary>
     /// Streams the raw image file to the caller.  
     /// The MIME type is now inferred from the image record or by inspecting the file header.
@@ -221,7 +221,7 @@ public class ImageController(
 
     private async Task<IActionResult> ReturnCompressed(Image image)
     {
-        return await  ReturnImg(image, ImageType.Compressed);
+        return await ReturnImg(image, ImageType.Compressed);
     }
 
     private async Task<IActionResult> ReturnThumbnail(Image image)
@@ -238,9 +238,9 @@ public class ImageController(
         {
             byte[] fileBytes = imageType switch
             {
-                ImageType.Original   => await fileService.LoadFullImage(image.Id),
+                ImageType.Original => await fileService.LoadFullImage(image.Id),
                 ImageType.Compressed => await fileService.LoadCompressedImage(image.Id),
-                ImageType.Thumbnail  => await fileService.LoadThumbnailImage(image.Id),
+                ImageType.Thumbnail => await fileService.LoadThumbnailImage(image.Id),
                 _ => throw new ArgumentOutOfRangeException(nameof(imageType), imageType, null)
             };
 
