@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
@@ -98,7 +98,7 @@ public class ImageController(
     /// Deletes an existing image.  
     /// Only the owner or a privileged user can delete; otherwise a 403 is returned.
     /// </summary>
-    [HttpDelete("delete/{imageId:guid}")]
+    [HttpDelete("{imageId:guid}")]
     [Authorize]
     public async Task<IActionResult> Delete(Guid imageId)
     {
