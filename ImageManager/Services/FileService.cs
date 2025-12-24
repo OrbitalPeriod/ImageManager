@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;

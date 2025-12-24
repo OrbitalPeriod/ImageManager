@@ -1,18 +1,18 @@
-#region Usings
+﻿#region Usings
 
 using System.Threading.Channels;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.OpenApi.Models;
 using ImageManager.Data;
+using ImageManager.Extensions;
 using ImageManager.Repositories;
 using ImageManager.Services;
 using ImageManager.Services.PlatformTokens;
 using ImageManager.Services.Query;
 using ImageManager.Services.Tags;
 using ImageManager.Services.UserInfo;
-using Microsoft.AspNetCore.Identity;
-using ImageManager.Extensions;
 using ImageManager.Workers;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using User = ImageManager.Data.Models.User;
 #endregion
 
@@ -76,6 +76,7 @@ builder.Services.AddScoped<IShareTokenRepository, ShareTokenRepository>();
 builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUserOwnedImageRepository, UserOwnedImageRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IPlatformSyncLogRepository, PlatformSyncLogRepository>();
 
 builder.Services.AddScoped<IDeleteImageService, DeleteImageService>();
 builder.Services.AddScoped<IImageDetailService, ImageDetailService>();

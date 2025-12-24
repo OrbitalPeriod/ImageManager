@@ -1,4 +1,4 @@
-using ImageManager.Repositories;
+﻿using ImageManager.Repositories;
 using Microsoft.AspNetCore.Identity;
 
 namespace ImageManager.Data.Models;

@@ -1,4 +1,4 @@
-using ImageManager.Data.Models;
+﻿using ImageManager.Data.Models;
 using ImageManager.Services.PlatformTokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -49,6 +49,18 @@ public class PlatformTokenController(
         return Ok(tokens);
     }
 
+    [Authorize]
+    [HttpGet("{id:guid}/logs")]
+    public async Task<ActionResult<IReadOnlyCollection<PlatformTokenSyncLog>>> GetPlatformTokenLogs(Guid id)
+    {
+        var user = await userManager.GetUserAsync(HttpContext.User);
+        if (user == null) return Unauthorized();
+
+        var logs = await tokenService.GetLogAsync(id, user);
+        if (logs == null) return NotFound();
+        return Ok(logs);
+    }
+
     #endregion
 
     #region Delete
@@ -57,7 +69,7 @@ public class PlatformTokenController(
     /// Deletes a platform token by its GUID.
     /// </summary>
     [Authorize]
-    [HttpDelete("delete/{id:Guid}")]
+    [HttpDelete("{id:Guid}")]
     public async Task<IActionResult> DeletePlatformToken(Guid id)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
@@ -84,7 +96,7 @@ public class PlatformTokenController(
     /// <param name="id">Identifier of token</param>
     /// <returns></returns>
     [Authorize]
-    [HttpPost("run/{id:Guid}")]
+    [HttpPost("{id:Guid}/run")]
     public async Task<IActionResult> RunPlatformToken(Guid id)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);

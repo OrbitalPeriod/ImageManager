@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using ImageManager.Controllers;
 using ImageManager.Data.Models;

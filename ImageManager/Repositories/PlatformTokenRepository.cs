@@ -1,4 +1,4 @@
-using ImageManager.Data;
+﻿using ImageManager.Data;
 using ImageManager.Data.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,5 +9,10 @@ public class PlatformTokenRepository(ApplicationDbContext dbContext) : EfReposit
     public async Task<IReadOnlyCollection<PlatformToken>> GetAllAsync()
     {
         return await dbContext.PlatformTokens.Include(i => i.User).AsNoTracking().ToListAsync();
+    }
+
+    public Task<bool> UserHasAccess(Guid id, string userId)
+    {
+        return dbContext.PlatformTokens.AnyAsync(pft => pft.UserId == userId && pft.Id == id);
     }
 }

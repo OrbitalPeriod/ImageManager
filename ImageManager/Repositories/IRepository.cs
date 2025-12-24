@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using System.Linq.Expressions;
 using ImageManager.Data;
@@ -92,7 +92,6 @@ public class EfRepository<TEntity, TKey>(ApplicationDbContext ctx) : IRepository
 
     public async Task Delete(TKey id)
     {
-        // Bulk delete – EF Core 7+ only.
         await DbContext.Set<TEntity>()
             .Where(t => t.Id.Equals(id))
             .ExecuteDeleteAsync();
@@ -135,6 +134,7 @@ public interface IImageRepository : IRepository<Image, Guid>
 public interface IPlatformTokenRepository : IRepository<PlatformToken, Guid>
 {
     Task<IReadOnlyCollection<PlatformToken>> GetAllAsync();
+    Task<bool> UserHasAccess(Guid id, string userId);
 }
 
 /// <summary>
@@ -167,6 +167,9 @@ public interface IUserOwnedImageRepository : IRepository<UserOwnedImage, Guid>
     IQueryable<UserOwnedImage> AccessibleImages(string? user, Guid? token);
 }
 
+/// <summary>
+/// Repository intreface for platform sync logs
+/// </summary>
 public interface IPlatformSyncLogRepository : IRepository<PlatformSyncLog, Guid>
 {
 

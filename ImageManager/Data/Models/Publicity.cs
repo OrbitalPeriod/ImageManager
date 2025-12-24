@@ -1,4 +1,4 @@
-namespace ImageManager.Data.Models;
+﻿namespace ImageManager.Data.Models;
 
 public enum Publicity
 {

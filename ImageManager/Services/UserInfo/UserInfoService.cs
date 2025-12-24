@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using System.Security.Claims;
 using ImageManager.Data.Models;

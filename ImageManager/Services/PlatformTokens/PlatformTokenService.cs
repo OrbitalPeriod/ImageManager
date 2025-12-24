@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using System.Threading.Channels;
 using ImageManager.Data;
@@ -14,7 +14,7 @@ namespace ImageManager.Services.PlatformTokens;
 /// Concrete implementation of <see cref="IPlatformTokenService"/> that uses an
 /// <see cref="IPlatformTokenRepository"/> to persist token data.
 /// </summary>
-public class PlatformTokenService(IPlatformTokenRepository platformTokenRepository, Channel<PlatformSyncRequest> platformSyncRequestChannel, ApplicationDbContext dbContext) : IPlatformTokenService
+public class PlatformTokenService(IPlatformTokenRepository platformTokenRepository, IPlatformSyncLogRepository platformSyncLogRepository, Channel<PlatformSyncRequest> platformSyncRequestChannel, ITransactionService transactionService) : IPlatformTokenService
 {
     #region Add
 
@@ -39,9 +39,16 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
 
         await platformTokenRepository.AddAsync(token);
 
-        await dbContext.SaveChangesAsync();
+        await transactionService.SaveChangesAsync();
 
         await platformSyncRequestChannel.Writer.WriteAsync(new PlatformSyncRequest(token.Id));
+    }
+
+    public async Task<IReadOnlyCollection<PlatformTokenSyncLog>?> GetLogAsync(Guid id, User user)
+    {
+        if (!await platformTokenRepository.UserHasAccess(id, user.Id)) return null;
+
+        return (await platformSyncLogRepository.ListAsync(psl => psl.PlatformTokenId == id)).Select(psl => new PlatformTokenSyncLog(psl.Id, psl.Success, psl.Message, psl.CreatedAt)).ToArray();
     }
 
     #endregion
@@ -85,6 +92,7 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
 
         // The repository’s key‑based delete performs a direct DELETE SQL statement.
         await platformTokenRepository.Delete(token.Id);
+        await transactionService.SaveChangesAsync();
         return DeleteResult.Deleted;
     }
 

@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using Google.Protobuf;
 using Grpc.Net.Client;

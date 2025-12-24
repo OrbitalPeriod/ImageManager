@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using CoenM.ImageHash.HashAlgorithms;
 using ImageManager.Data;

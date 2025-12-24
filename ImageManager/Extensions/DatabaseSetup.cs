@@ -1,4 +1,4 @@
-using ImageManager.Data;
+﻿using ImageManager.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace ImageManager.Extensions;

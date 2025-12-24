@@ -1,4 +1,4 @@
-using ImageManager.Data.Models;
+﻿using ImageManager.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +14,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Tag> Tags { get; set; }
     public DbSet<PlatformToken> PlatformTokens { get; set; }
     public DbSet<UserOwnedImage> UserOwnedImages { get; set; }
+    public DbSet<PlatformSyncLog> PlatformSyncLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

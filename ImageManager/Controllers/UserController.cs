@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using ImageManager.Services.UserInfo;
 using Microsoft.AspNetCore.Authorization;

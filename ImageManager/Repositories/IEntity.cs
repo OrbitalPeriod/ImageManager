@@ -1,4 +1,4 @@
-namespace ImageManager.Repositories;
+﻿namespace ImageManager.Repositories;
 
 public interface IEntity<TKey>
 {

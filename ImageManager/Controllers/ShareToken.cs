@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 using ImageManager.Data.Models;
 using ImageManager.Services.ShareToken;
 using Microsoft.AspNetCore.Authorization;

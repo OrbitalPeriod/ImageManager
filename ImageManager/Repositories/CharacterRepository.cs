@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using Microsoft.EntityFrameworkCore;

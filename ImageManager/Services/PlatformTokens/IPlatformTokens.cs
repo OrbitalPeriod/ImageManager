@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using ImageManager.Data.Models;
 #endregion
@@ -28,6 +28,15 @@ namespace ImageManager.Services.PlatformTokens
         DateTime? Expires,
         bool IsExpired,
         bool CheckPrivate);
+
+    /// <summary>
+    /// Data transfer object returned by the service for a sync.
+    /// </summary>
+    public record PlatformTokenSyncLog(
+        Guid Id,
+        bool Success,
+        string Message,
+        DateTime CreatedAt);
 
     #endregion
 
@@ -76,6 +85,14 @@ namespace ImageManager.Services.PlatformTokens
         /// <param name="user">user who owns the token</param>
         /// <returns></returns>
         Task<QueueResult> QueueAsync(Guid id, User user);
+
+        /// <summary>
+        /// Get the logs associated with a specific id and user
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="user"></param>
+        /// <returns></returns>
+        Task<IReadOnlyCollection<PlatformTokenSyncLog>?> GetLogAsync(Guid id, User user);
     }
 
     #endregion

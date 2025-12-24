@@ -1,4 +1,4 @@
-namespace ImageManager.Data.Responses;
+﻿namespace ImageManager.Data.Responses;
 
 public class PaginatedResponse<T>
 {

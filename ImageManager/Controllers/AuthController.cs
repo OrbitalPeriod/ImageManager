@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using Microsoft.AspNetCore.Identity;

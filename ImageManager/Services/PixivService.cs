@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using PixivCS.Api;
 using PixivCS.Models.Common;

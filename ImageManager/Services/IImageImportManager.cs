@@ -1,4 +1,4 @@
-using ImageManager.Data.Models;
+﻿using ImageManager.Data.Models;
 
 namespace ImageManager.Services;
 
