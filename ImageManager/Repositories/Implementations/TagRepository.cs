@@ -2,10 +2,13 @@
 
 using ImageManager.Data;
 using ImageManager.Data.Models;
+using ImageManager.Repositories.Abstract_Interfaces;
+using ImageManager.Repositories.Repository_Interfaces;
 using Microsoft.EntityFrameworkCore;
+
 #endregion
 
-namespace ImageManager.Repositories;
+namespace ImageManager.Repositories.Implementations;
 
 /// <summary>
 /// Repository for <see cref="Tag"/> entities.

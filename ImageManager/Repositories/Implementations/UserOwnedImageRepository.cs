@@ -2,9 +2,12 @@
 
 using ImageManager.Data;
 using ImageManager.Data.Models;
+using ImageManager.Repositories.Abstract_Interfaces;
+using ImageManager.Repositories.Repository_Interfaces;
+
 #endregion
 
-namespace ImageManager.Repositories;
+namespace ImageManager.Repositories.Implementations;
 
 /// <summary>
 /// Repository for <see cref="UserOwnedImage"/> entities.

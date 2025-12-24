@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using ImageManager.Data;
 using ImageManager.Extensions;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Implementations;
 using ImageManager.Services;
 using ImageManager.Services.PlatformTokens;
 using ImageManager.Services.Query;
@@ -69,7 +70,7 @@ builder.Services.AddSingleton(Channel.CreateBounded<PlatformSyncRequest>(new Bou
 
 #region Repository Registrations
 builder.Services.AddScoped<ICharacterRepository, CharacterRepository>();
-builder.Services.AddScoped<IDownloadedImageRepository, DownloadedImageRepository>();
+builder.Services.AddScoped<DownloadedImageRepository, DownloadedImageRepository>();
 builder.Services.AddScoped<IImageRepository, ImageRepository>();
 builder.Services.AddScoped<IPlatformTokenRepository, PlatformTokenRepository>();
 builder.Services.AddScoped<IShareTokenRepository, ShareTokenRepository>();

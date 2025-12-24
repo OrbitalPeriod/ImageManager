@@ -2,6 +2,7 @@
 
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Implementations;
 using PixivCS.Models.Illust;
 
 #endregion
@@ -28,7 +29,7 @@ public class PixivImportManager(
     ILogger<PixivImportManager> logger,
     IUserRepository userRepository,
     IPlatformTokenRepository platformTokenRepository,
-    IDownloadedImageRepository downloadedImageRepository,
+    DownloadedImageRepository downloadedImageRepository,
     IUserOwnedImageRepository userOwnedImageRepository,
     ITransactionService transactionService) : IPixivImageImportManager
 {

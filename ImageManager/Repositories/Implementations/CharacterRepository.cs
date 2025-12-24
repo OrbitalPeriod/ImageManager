@@ -1,10 +1,13 @@
 ﻿#region Usings
 using ImageManager.Data;
 using ImageManager.Data.Models;
+using ImageManager.Repositories.Abstract_Interfaces;
+using ImageManager.Repositories.Repository_Interfaces;
 using Microsoft.EntityFrameworkCore;
+
 #endregion
 
-namespace ImageManager.Repositories;
+namespace ImageManager.Repositories.Implementations;
 
 /// <summary>
 /// Repository for <see cref="Character"/> entities.
@@ -12,7 +15,7 @@ namespace ImageManager.Repositories;
 /// convenience method that retrieves or creates characters by name.
 /// </summary>
 public class CharacterRepository(ApplicationDbContext dbContext)
-    : EfRepository<Character, Guid>(dbContext), ICharacterRepository
+    : EfRepository<Character, Guid>(dbContext), Repository_Interfaces.ICharacterRepository
 {
     #region Public Methods
 
@@ -43,7 +46,7 @@ public class CharacterRepository(ApplicationDbContext dbContext)
 
         if (processed.Length == 0) return [];
 
-        var existing = await dbContext.Characters
+        var existing = await DbContext.Characters
             .Where(c => processed.Contains(c.Name))
             .ToDictionaryAsync(c => c.Name, c => c);
 
@@ -53,7 +56,7 @@ public class CharacterRepository(ApplicationDbContext dbContext)
             if (!existing.TryGetValue(name, out var character))
             {
                 character = new Character { Name = name };
-                dbContext.Characters.Add(character);
+                DbContext.Characters.Add(character);
             }
 
             result.Add(character);

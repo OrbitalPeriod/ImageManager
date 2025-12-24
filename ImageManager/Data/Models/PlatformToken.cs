@@ -3,7 +3,7 @@ using ImageManager.Repositories;
 
 namespace ImageManager.Data.Models;
 
-public class PlatformToken : IEntity<Guid>
+public class PlatformToken : IEntity<Guid>, IUserOwnedEntity
 {
     [Key]
     public Guid Id { get; private set; }

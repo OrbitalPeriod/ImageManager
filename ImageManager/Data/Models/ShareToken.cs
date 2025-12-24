@@ -3,7 +3,7 @@ using ImageManager.Repositories;
 
 namespace ImageManager.Data.Models;
 
-public class ShareToken : IEntity<Guid>
+public class ShareToken : IEntity<Guid>, IUserOwnedEntity
 {
     [Key]
     public Guid Id { get; private set; }

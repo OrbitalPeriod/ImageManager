@@ -2,10 +2,13 @@
 
 using ImageManager.Data;
 using ImageManager.Data.Models;
+using ImageManager.Repositories.Abstract_Interfaces;
+using ImageManager.Repositories.Repository_Interfaces;
 using Microsoft.EntityFrameworkCore;
+
 #endregion
 
-namespace ImageManager.Repositories;
+namespace ImageManager.Repositories.Implementations;
 
 /// <summary>
 /// Repository for <see cref="Image"/> entities.
@@ -41,7 +44,7 @@ public class ImageRepository(ApplicationDbContext dbContext)
     public IQueryable<UserOwnedImage> AccessibleImages(User? user, Guid? token)
     {
         // Base conditions – covers ownership and public visibility.
-        var baseQuery = dbContext.UserOwnedImages.Where(uoid =>
+        var baseQuery = DbContext.UserOwnedImages.Where(uoid =>
             (user != null && uoid.UserId == user.Id) ||                                      // owned images
                                                                                              // Open + General rating – public access for everyone
             (uoid.Publicity == Publicity.Open &&
@@ -57,7 +60,7 @@ public class ImageRepository(ApplicationDbContext dbContext)
 
         if (token != null)
         {
-            var tokenQuery = dbContext.UserOwnedImages
+            var tokenQuery = DbContext.UserOwnedImages
                 .Where(uoid => uoid.ShareTokens.Any(stk =>
                     stk.Id == token &&
                     stk.Expires > DateTime.UtcNow));
@@ -75,7 +78,7 @@ public class ImageRepository(ApplicationDbContext dbContext)
     /// <returns>The matching <see cref="Image"/> or <c>null</c> if none found.</returns>
     public async Task<Image?> GetByHashAsync(ulong hash)
     {
-        return await dbContext.Images.Include(i => i.UserOwnedImages).FirstOrDefaultAsync(i => i.Hash == hash);
+        return await DbContext.Images.Include(i => i.UserOwnedImages).FirstOrDefaultAsync(i => i.Hash == hash);
     }
 
     /// <summary>
@@ -85,22 +88,11 @@ public class ImageRepository(ApplicationDbContext dbContext)
     /// <returns>The matching <see cref="Image"/> or <c>null</c> if none found.</returns>
     public async Task<Image?> GetByIdFullAsync(Guid id)
     {
-        return await dbContext.Images
+        return await DbContext.Images
             .Include(i => i.Tags)
             .Include(i => i.Characters)
             .Include(i => i.UserOwnedImages)
             .FirstOrDefaultAsync(i => i.Id == id);
     }
-
-    /// <summary>
-    /// Determines whether an image with the specified ID exists.
-    /// </summary>
-    /// <param name="id">The image’s GUID.</param>
-    /// <returns><c>true</c> if a record exists; otherwise <c>false</c>.</returns>
-    public async Task<bool> ImageExistsAsync(Guid id)
-    {
-        return await dbContext.Images.AnyAsync(i => i.Id == id);
-    }
-
     #endregion
 }
