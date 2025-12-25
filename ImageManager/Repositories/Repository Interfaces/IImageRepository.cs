@@ -10,7 +10,9 @@ namespace ImageManager.Repositories.Repository_Interfaces;
 /// <summary>
 /// Repository interface for images with advanced access control logic.
 /// </summary>
-public interface IImageRepository : IRepository<Image, Guid>, IExistsRepository<Image, Guid>
+public interface IImageRepository : IRepository<Image, Guid>, IExistsRepository<Image, Guid>,
+    IReadableRepository<Image, Guid>,
+    IAddableEntityRepository<Image, Guid>
 {
     Task<bool> CanAccessImageAsync(User? user, Image image, Guid? token);
 

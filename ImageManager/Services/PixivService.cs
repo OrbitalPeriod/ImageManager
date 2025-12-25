@@ -121,11 +121,11 @@ public sealed class PixivService : IPixivService
         await EnsureAuthenticatedAsync();
 
         var imageUrls = illustration.ImageUrls;
-        if (imageUrls == null)
+        if (imageUrls == null && illustration?.MetaSinglePage?.OriginalImageUrl == null)
             throw new ArgumentNullException(nameof(imageUrls), "Illustration does not contain any image URLs.");
 
         // Prefer the original URL, fall back to large.
-        var url = imageUrls.Original ?? imageUrls.Large;
+        var url = illustration.MetaPages.FirstOrDefault()?.ImageUrls?.Original ?? illustration.MetaPages.FirstOrDefault()?.ImageUrls?.Large ?? illustration?.MetaSinglePage?.OriginalImageUrl ?? imageUrls!.Original ?? imageUrls.Large;
         if (string.IsNullOrWhiteSpace(url))
             throw new InvalidOperationException("No valid image URL available for download.");
 

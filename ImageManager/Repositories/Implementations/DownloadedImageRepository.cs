@@ -3,6 +3,7 @@
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using ImageManager.Repositories.Abstract_Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 #endregion
 
@@ -15,4 +16,8 @@ namespace ImageManager.Repositories.Implementations;
 public class DownloadedImageRepository(ApplicationDbContext dbContext)
     : EfRepository<DownloadedImage, Guid>(dbContext), Repository_Interfaces.IDownloadedImageRepository
 {
+    public Task<bool> ImageInDownloaded(Guid imageId)
+    {
+        return DbContext.DownloadedImages.AnyAsync(i => i.ImageId == imageId);
+    }
 }

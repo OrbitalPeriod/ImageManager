@@ -6,10 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ImageManager.Repositories.Implementations;
 
-public class UserRepository(ApplicationDbContext dbContext) : EfRepository<User, String>(dbContext), IUserRepository
+public class UserRepository(ApplicationDbContext dbContext) : EfRepository<User, string>(dbContext), IUserRepository
 {
     public async Task<ICollection<User>> GetAllAsync()
     {
-        return await dbContext.Users.ToListAsync();
+        return await DbContext.Users.ToListAsync();
     }
 }

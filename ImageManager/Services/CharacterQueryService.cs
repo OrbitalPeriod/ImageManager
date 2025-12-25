@@ -4,6 +4,7 @@ using ImageManager.Controllers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Repository_Interfaces;
 using Microsoft.EntityFrameworkCore;
 #endregion
 

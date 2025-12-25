@@ -4,6 +4,7 @@ using System.Threading.Channels;
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Repository_Interfaces;
 using ImageManager.Workers;
 
 #endregion
@@ -46,7 +47,7 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
 
     public async Task<IReadOnlyCollection<PlatformTokenSyncLog>?> GetLogAsync(Guid id, User user)
     {
-        if (!await platformTokenRepository.UserHasAccess(id, user.Id)) return null;
+        if (!await platformTokenRepository.CanAccessAsync(id, user)) return null;
 
         return (await platformSyncLogRepository.ListAsync(psl => psl.PlatformTokenId == id)).Select(psl => new PlatformTokenSyncLog(psl.Id, psl.Success, psl.Message, psl.CreatedAt)).ToArray();
     }

@@ -10,7 +10,11 @@ namespace ImageManager.Repositories.Repository_Interfaces;
 /// <summary>
 /// Repository interface for platform‑level tokens.
 /// </summary>
-public interface IPlatformTokenRepository : IRepository<PlatformToken, Guid>
+public interface IPlatformTokenRepository : IRepository<PlatformToken, Guid>,
+    IReadableRepository<PlatformToken, Guid>,
+    IDeleteableRepository<PlatformToken, Guid>,
+    IAddableEntityRepository<PlatformToken, Guid>,
+    IUserCanAccess<PlatformToken, Guid>
 {
     Task<IReadOnlyCollection<PlatformToken>> GetAllAsync();
 }

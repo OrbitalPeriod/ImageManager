@@ -10,7 +10,9 @@ namespace ImageManager.Repositories.Repository_Interfaces;
 /// <summary>
 /// Repository intreface for platform sync logs
 /// </summary>
-public interface IPlatformSyncLogRepository : IRepository<PlatformSyncLog, Guid>
+public interface IPlatformSyncLogRepository : IRepository<PlatformSyncLog, Guid>,
+    IReadableRepository<PlatformSyncLog, Guid>,
+    IAddableEntityRepository<PlatformSyncLog, Guid>
 {
 
 }

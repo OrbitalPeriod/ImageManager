@@ -1,6 +1,7 @@
 ﻿using System.Threading.Channels;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Repository_Interfaces;
 using ImageManager.Services;
 
 namespace ImageManager.Workers;

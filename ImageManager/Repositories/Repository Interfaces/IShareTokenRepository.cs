@@ -10,4 +10,4 @@ namespace ImageManager.Repositories.Repository_Interfaces;
 /// <summary>
 /// Repository interface for share tokens.
 /// </summary>
-public interface IShareTokenRepository : IRepository<ShareToken, Guid>;
+public interface IShareTokenRepository : IRepository<ShareToken, Guid>, IAddableEntityRepository<ShareToken, Guid>;

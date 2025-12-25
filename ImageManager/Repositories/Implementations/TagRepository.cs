@@ -43,7 +43,7 @@ public class TagRepository(ApplicationDbContext dbContext)
 
         if (!processedTags.Any()) return [];
 
-        var existing = await dbContext.Tags
+        var existing = await DbContext.Tags
             .Where(t => processedTags.Contains(t.Name))
             .ToDictionaryAsync(t => t.Name, t => t);
 
@@ -54,7 +54,7 @@ public class TagRepository(ApplicationDbContext dbContext)
             {
 
                 tag = new Tag { Name = name };
-                dbContext.Tags.Add(tag);
+                DbContext.Tags.Add(tag);
             }
 
             result.Add(tag);

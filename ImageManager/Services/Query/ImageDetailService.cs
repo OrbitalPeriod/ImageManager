@@ -3,6 +3,7 @@
 using ImageManager.Controllers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Repository_Interfaces;
 
 #endregion
 
@@ -72,7 +73,7 @@ public interface IImageDetailService
 /// EF Core implementation of <see cref="IImageDetailService"/>.
 /// Uses an <see cref="IImageRepository"/> to fetch images and perform access checks.
 /// </summary>
-public class ImageDetailService(IImageRepository userOwnedImageRepository) : IImageDetailService
+public class ImageDetailService(IImageRepository imageRepository) : IImageDetailService
 {
     /// <inheritdoc />
     public async Task<ImageAccessResult> GetImageAccessAsync(
@@ -80,10 +81,10 @@ public class ImageDetailService(IImageRepository userOwnedImageRepository) : IIm
         User? user,
         Guid? token)
     {
-        var image = await userOwnedImageRepository.GetByIdAsync(imageId);
+        var image = await imageRepository.GetByIdAsync(imageId);
         if (image == null) return new ImageAccessResult { Found = false };
 
-        var allowed = await userOwnedImageRepository.CanAccessImageAsync(user, image, token);
+        var allowed = await imageRepository.CanAccessImageAsync(user, image, token);
 
         return new ImageAccessResult
         {
@@ -99,10 +100,10 @@ public class ImageDetailService(IImageRepository userOwnedImageRepository) : IIm
         User? user,
         Guid? token)
     {
-        var image = await userOwnedImageRepository.GetByIdFullAsync(imageId);
+        var image = await imageRepository.GetByIdFullAsync(imageId);
         if (image == null) return new ImageDataAccessResult { Found = false };
 
-        var allowed = await userOwnedImageRepository.CanAccessImageAsync(user, image, token);
+        var allowed = await imageRepository.CanAccessImageAsync(user, image, token);
         if (!allowed) return new ImageDataAccessResult { Found = true, Allowed = false };
 
         var data = new ImageController.ImageDataResponse(

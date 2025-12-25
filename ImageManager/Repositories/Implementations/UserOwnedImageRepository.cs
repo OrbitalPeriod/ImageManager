@@ -36,7 +36,7 @@ public class UserOwnedImageRepository(ApplicationDbContext dbContext)
     /// </summary>
     public IQueryable<UserOwnedImage> AccessibleImages(string? id, Guid? token)
     {
-        var baseQuery = dbContext.UserOwnedImages.Where(uoid =>
+        var baseQuery = DbContext.UserOwnedImages.Where(uoid =>
             (id != null && uoid.UserId == id) ||
 
             (uoid.Publicity == Publicity.Open &&
@@ -52,7 +52,7 @@ public class UserOwnedImageRepository(ApplicationDbContext dbContext)
 
         if (token != null)
         {
-            var tokenQuery = dbContext.UserOwnedImages
+            var tokenQuery = DbContext.UserOwnedImages
                 .Where(uoid => uoid.ShareTokens.Any(stk =>
                     stk.Id == token &&
                     stk.Expires > DateTime.UtcNow));

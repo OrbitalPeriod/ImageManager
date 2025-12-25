@@ -15,7 +15,7 @@ public interface IReadableRepository<TEntity, TKey> : IRepository<TEntity, TKey>
     /// <summary>
     /// Retrieves an entity by its primary key.
     /// </summary>
-    async Task<TEntity?> GetByIdAsync(TKey id)  => await DbContext.Set<TEntity>().FindAsync(id);
+    async Task<TEntity?> GetByIdAsync(TKey id) => await DbContext.Set<TEntity>().FindAsync(id);
 
     /// <summary>
     /// Returns a list of entities that match the optional filter,

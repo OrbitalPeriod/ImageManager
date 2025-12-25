@@ -10,7 +10,7 @@ namespace ImageManager.Repositories.Repository_Interfaces;
 /// <summary>
 /// Repository interface for users.
 /// </summary>
-public interface IUserRepository : IRepository<User, string>
+public interface IUserRepository : IRepository<User, string>, IReadableRepository<User, string>
 {
     Task<ICollection<User>> GetAllAsync();
 }

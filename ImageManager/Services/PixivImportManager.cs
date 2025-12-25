@@ -3,6 +3,7 @@
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 using ImageManager.Repositories.Implementations;
+using ImageManager.Repositories.Repository_Interfaces;
 using PixivCS.Models.Illust;
 
 #endregion
@@ -29,7 +30,7 @@ public class PixivImportManager(
     ILogger<PixivImportManager> logger,
     IUserRepository userRepository,
     IPlatformTokenRepository platformTokenRepository,
-    DownloadedImageRepository downloadedImageRepository,
+    IDownloadedImageRepository downloadedImageRepository,
     IUserOwnedImageRepository userOwnedImageRepository,
     ITransactionService transactionService) : IPixivImageImportManager
 {
@@ -39,17 +40,22 @@ public class PixivImportManager(
         if (token.Platform != Platform.Pixiv)
             throw new ArgumentException("Token must be Pixiv", nameof(token));
 
+
         try
         {
+            var user = await userRepository.GetByIdAsync(token.UserId);
+
+            if (user == null) throw new ArgumentException("User not found", nameof(token));
+
             logger.LogInformation("Starting Pixiv import for user {UserName} ({UserId})",
-                token.User.UserName, token.UserId);
+                user.UserName, token.UserId);
 
             var bookmarks = await pixivService.GetLikedBookmarks(token.PlatformUserId, token.Token, token.CheckPrivate);
 
             if (!bookmarks.Any())
             {
                 logger.LogInformation("No new bookmarks found for user {UserName} ({UserId})",
-                    token.User.UserName, token.UserId);
+                    user.UserName, token.UserId);
                 return;
             }
 
@@ -64,7 +70,7 @@ public class PixivImportManager(
             var toDownload = bookmarks.Where(ill => !downloadedIds.Contains(ill.Id)).ToList();
 
             logger.LogInformation("Found {Count} new illustrations for user {UserName} ({UserId})",
-                toDownload.Count, token.User.UserName, token.UserId);
+                toDownload.Count, user.UserName, token.UserId);
 
             int successCount = 0;
             int failCount = 0;
@@ -73,7 +79,7 @@ public class PixivImportManager(
             {
                 try
                 {
-                    await DownloadImage(token.User, illustration);
+                    await DownloadImage(user, illustration);
                     successCount++;
                 }
                 catch (Exception ex)
@@ -81,13 +87,13 @@ public class PixivImportManager(
                     failCount++;
                     logger.LogError(ex,
                         "Failed to download or import illustration {IllustrationId} ({Title}) for user {UserName} ({UserId})",
-                        illustration.Id, illustration.Title, token.User.UserName, token.UserId);
+                        illustration.Id, illustration.Title, user.UserName, token.UserId);
                 }
             }
 
             logger.LogInformation(
                 "Completed downloading Pixiv illustrations for user {UserName} ({UserId}): {SuccessCount} succeeded, {FailCount} failed",
-                token.User.UserName, token.UserId, successCount, failCount);
+                user.UserName, token.UserId, successCount, failCount);
 
             // Handle existing illustrations not yet linked to this user
             var existingIds = illustIds.Except(downloadedIds).ToArray();
@@ -106,7 +112,7 @@ public class PixivImportManager(
                     {
                         UserId = token.UserId,
                         ImageId = existingImage.ImageId,
-                        Publicity = token.User.DefaultPublicity
+                        Publicity = user.DefaultPublicity
                     });
                 }
 
@@ -117,20 +123,20 @@ public class PixivImportManager(
                     }
 
                 logger.LogInformation("Added {Count} existing illustrations for user {UserName} ({UserId})",
-                    newUserLinks.Count, token.User.UserName, token.UserId);
+                    newUserLinks.Count, user.UserName, token.UserId);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex,
                     "Failed to link existing illustrations for user {UserName} ({UserId})",
-                    token.User.UserName, token.UserId);
+                    user.UserName, token.UserId);
             }
         }
         catch (Exception ex)
         {
             logger.LogCritical(ex,
-                "Unexpected error during Pixiv import for user {UserName} ({UserId})",
-                token.User.UserName, token.UserId);
+                "Unexpected error during Pixiv import for user ({UserId})",
+                token.UserId);
             throw;
         }
     }
@@ -167,12 +173,16 @@ public class PixivImportManager(
                 return;
             }
 
-            await downloadedImageRepository.AddAsync(new DownloadedImage
+            // Check if image is already in downloaded
+            if (!await downloadedImageRepository.ImageInDownloaded((Guid)imageId))
             {
-                Platform = Platform.Pixiv,
-                PlatformImageId = illustration.Id,
-                ImageId = imageId.Value
-            });
+                await downloadedImageRepository.AddAsync(new DownloadedImage
+                {
+                    Platform = Platform.Pixiv,
+                    PlatformImageId = illustration.Id,
+                    ImageId = (Guid)imageId,
+                });
+            }
 
             await transactionService.SaveChangesAsync();
             await transaction.CommitAsync();
@@ -181,7 +191,6 @@ public class PixivImportManager(
         catch (Exception ex)
         {
             logger.LogError(ex, "Unexpected error while processing illustration {IllustrationId}", illustration.Id);
-            await transactionService.SaveChangesAsync();
             await transaction.RollbackAsync();
         }
     }

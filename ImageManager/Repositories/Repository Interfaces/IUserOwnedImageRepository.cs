@@ -10,7 +10,9 @@ namespace ImageManager.Repositories.Repository_Interfaces;
 /// <summary>
 /// Repository interface for user‑owned images with access helpers.
 /// </summary>
-public interface IUserOwnedImageRepository : IRepository<UserOwnedImage, Guid>
+public interface IUserOwnedImageRepository : IRepository<UserOwnedImage, Guid>,
+    IReadableRepository<UserOwnedImage, Guid>,
+    IAddableEntityRepository<UserOwnedImage, Guid>
 {
     IQueryable<UserOwnedImage> AccessibleImages(User? user, Guid? token);
     IQueryable<UserOwnedImage> AccessibleImages(string? user, Guid? token);

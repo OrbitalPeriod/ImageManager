@@ -10,6 +10,9 @@ namespace ImageManager.Repositories.Repository_Interfaces;
 /// <summary>
 /// Repository interface for downloaded image records.
 /// </summary>
-public interface IDownloadedImageRepository : IRepository<DownloadedImage, Guid>
+public interface IDownloadedImageRepository : IRepository<DownloadedImage, Guid>,
+    IReadableRepository<DownloadedImage, Guid>,
+    IAddableEntityRepository<DownloadedImage, Guid>
 {
+    Task<bool> ImageInDownloaded(Guid imageId);
 }

@@ -3,6 +3,7 @@
 using System.Security.Claims;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Repository_Interfaces;
 using Microsoft.AspNetCore.Identity;
 #endregion
 

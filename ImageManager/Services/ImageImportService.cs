@@ -5,6 +5,7 @@ using ImageManager.Data;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 using ImageManager.Repositories.Implementations;
+using ImageManager.Repositories.Repository_Interfaces;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
 #endregion
@@ -38,7 +39,6 @@ public class ImageImportService(
     IFileService fileService,
     IImageRepository imageRepository,
     IUserOwnedImageRepository userOwnedImageRepository,
-    DownloadedImageRepository downloadedImageRepository, // currently unused but kept for future extensions
     ITagRepository tagRepository,
     ICharacterRepository characterRepository,
     ILogger<ImageImportService> logger) : IImageImportService
