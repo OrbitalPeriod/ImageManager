@@ -1,53 +1,10 @@
-﻿#region Usings
-
-using ImageManager.Controllers;
+﻿using ImageManager.Controllers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
-using ImageManager.Repositories;
 using ImageManager.Repositories.Repository_Interfaces;
 using Microsoft.EntityFrameworkCore;
-#endregion
 
-namespace ImageManager.Services;
-
-/// <summary>
-/// Service that queries characters associated with images the current user can access.
-/// </summary>
-public interface ICharacterQueryService
-{
-    /// <summary>
-    /// Retrieves a paginated list of all characters present in images accessible to the caller.
-    /// </summary>
-    /// <param name="user">The authenticated user; may be <c>null</c> for anonymous.</param>
-    /// <param name="token">Optional share token granting access to private images.</param>
-    /// <param name="page">1‑based page number.</param>
-    /// <param name="pageSize">Number of items per page.</param>
-    /// <returns>A paginated response containing character counts.</returns>
-    Task<PaginatedResponse<CharacterController.GetCharacterResponse>> GetCharactersAsync(
-        User? user,
-        Guid? token,
-        int page,
-        int pageSize);
-
-    /// <summary>
-    /// Searches for characters whose names contain the supplied search term.
-    /// The result is paginated and sorted by descending usage count.
-    /// </summary>
-    /// <param name="user">The authenticated user; may be <c>null</c> for anonymous.</param>
-    /// <param name="token">Optional share token granting access to private images.</param>
-    /// <param name="searchTerm">Substring to match against character names. If empty, no filtering is applied.</param>
-    /// <param name="page">1‑based page number.</param>
-    /// <param name="pageSize">Number of items per page (max 200).</param>
-    /// <returns>A paginated response containing matching characters.</returns>
-    Task<PaginatedResponse<CharacterController.GetCharacterResponse>> SearchAsync(
-        User? user,
-        Guid? token,
-        string searchTerm,
-        int page,
-        int pageSize);
-}
-
-#region Implementation
+namespace ImageManager.Services.Character;
 
 /// <summary>
 /// EF Core implementation of <see cref="ICharacterQueryService"/> that queries
@@ -159,4 +116,3 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
     }
 }
 
-#endregion

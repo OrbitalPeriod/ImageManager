@@ -1,30 +1,10 @@
-﻿#region Usings
-
-using ImageManager.Data;
+﻿using ImageManager.Data;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
-#endregion
+using ImageManager.Services.ImageImport;
+
 
 namespace ImageManager.Services.Query;
-
-#region Interface
-
-/// <summary>
-/// Contract for uploading images to the system.
-/// The image is processed by an <see cref="IImageImportService"/> and persisted
-/// inside a database transaction.
-/// </summary>
-public interface IUploadImageService
-{
-    /// <summary>
-    /// Uploads the supplied file, imports it via <paramref name="imageImportService"/>,
-    /// and stores it under the given user’s ownership.
-    /// </summary>
-    Task<Guid?> UploadAsync(IFormFile file, Publicity? publicity, User user);
-}
-
-#endregion
-
-#region Implementation
 
 /// <summary>
 /// EF Core implementation that imports an uploaded image using
@@ -35,7 +15,7 @@ public class UploadImageService(
     ITransactionService transactionService) : IUploadImageService
 {
     /// <inheritdoc />
-    public async Task<Guid?> UploadAsync(IFormFile file, Publicity? publicity, User user)
+    public async Task<Result<ImportImageSuccess, ImportImageError>> UploadAsync(IFormFile file, Publicity? publicity, User user)
     {
         if (file == null) throw new ArgumentNullException(nameof(file));
         if (user == null) throw new ArgumentNullException(nameof(user));
@@ -54,18 +34,10 @@ public class UploadImageService(
 
             // Delegate the actual import logic to the dedicated service.
 
-            var imageId = await imageImportService.ImportImage(
+            return await imageImportService.ImportImage(
                 imageBytes,
                 resolvedPublicity,
                 user.Id);
-
-            if (imageId != null) return imageId;
-
-            throw new Exception("Import failed");
-            return null;
-
         });
     }
 }
-
-#endregion

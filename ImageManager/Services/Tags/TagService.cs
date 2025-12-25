@@ -16,8 +16,6 @@ namespace ImageManager.Services.Tags;
 /// </summary>
 public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : ITagService
 {
-    #region GetTagsAsync
-
     /// <inheritdoc />
     public async Task<PaginatedResponse<TagCountDto>> GetTagsAsync(
         User? user,
@@ -54,10 +52,6 @@ public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : IT
             TotalItems = totalCount
         };
     }
-
-    #endregion
-
-    #region SearchTagsAsync
 
     /// <inheritdoc />
     public async Task<PaginatedResponse<TagCountDto>> SearchTagsAsync(
@@ -105,6 +99,4 @@ public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : IT
             TotalItems = totalCount
         };
     }
-
-    #endregion
 }

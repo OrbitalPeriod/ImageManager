@@ -1,15 +1,11 @@
-﻿#region Usings
-
-using ImageManager.Data;
+﻿using ImageManager.Data;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 using ImageManager.Repositories.Repository_Interfaces;
 using Microsoft.EntityFrameworkCore;
-#endregion
 
 namespace ImageManager.Services.ShareToken;
-
-#region Implementation
 
 /// <summary>
 /// EF Core implementation of <see cref="IShareTokenService"/> that creates share tokens
@@ -20,7 +16,7 @@ public class ShareTokenService(
     IShareTokenRepository shareTokenRepository) : IShareTokenService
 {
     /// <inheritdoc />
-    public async Task<Guid?> AddPlatformTokenAsync(Guid imageId, DateTime? expiration, User user)
+    public async Task<Option<Guid>> AddPlatformTokenAsync(Guid imageId, DateTime? expiration, User user)
     {
         // Defensive checks – make the contract explicit.
         if (user == null) throw new ArgumentNullException(nameof(user));
@@ -30,12 +26,12 @@ public class ShareTokenService(
         var userOwnedImage = await userOwnedImageRepository.AccessibleImages(user, null)
             .FirstOrDefaultAsync(uoi => uoi.ImageId == imageId);
 
-        if (userOwnedImage == null) return null;   // The user does not own the requested image.
+        if (userOwnedImage == null) return Option<Guid>.None();   // The user does not own the requested image.
 
         var shareToken = new Data.Models.ShareToken()
         {
             Created = DateTime.UtcNow,
-            Expires = expiration ?? DateTime.UtcNow.AddDays(3),  // Default to 3 days if none supplied.
+            Expires = expiration ?? DateTime.UtcNow.AddDays(3),  // Default to 3days if none supplied.
             UserOwnedImageId = userOwnedImage.Id,
             UserId = user.Id
         };
@@ -43,8 +39,6 @@ public class ShareTokenService(
         // Persist the token via the repository layer.
         await shareTokenRepository.AddAsync(shareToken);
 
-        return shareToken.Id;
+        return Option<Guid>.Some(shareToken.Id);
     }
 }
-
-#endregion

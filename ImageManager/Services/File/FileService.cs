@@ -1,51 +1,8 @@
-﻿#region Usings
-
-using SixLabors.ImageSharp;
+﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
 
-#endregion
-
-namespace ImageManager.Services;
-
-/// <summary>
-/// Service responsible for persisting and retrieving image files on disk.
-/// Images are stored as PNGs with a GUID filename.
-/// </summary>
-public interface IFileService
-{
-    /// <summary>
-    /// Loads the raw bytes of an image identified by its GUID.
-    /// Throws <see cref="FileNotFoundException"/> if no file exists for the given id.
-    /// </summary>
-    /// <param name="id">The identifier that was returned when the image was saved.</param>
-    /// <returns>The PNG byte array.</returns>
-    Task<byte[]> LoadFullImage(Guid id);
-    /// <summary>
-    /// Loads the raw bytes of a jpg thumbnail image identified by its GUID
-    /// </summary>
-    /// <param name="id">The identifier that was returned when the image was saved.</param>
-    /// <returns>The jpg byte array.</returns>
-    Task<byte[]> LoadThumbnailImage(Guid id);
-
-    /// <summary>
-    /// Loads the raw bytes of a jpg compressed image identified by its GUID
-    /// </summary>
-    /// <param name="id">The identifier that was returned when the image was saved.</param>
-    /// <returns>The jpg byte array.</returns>
-    Task<byte[]> LoadCompressedImage(Guid id);
-
-    /// <summary>
-    /// Persists an <see cref="Image"/> instance as a PNG file and returns the generated GUID.
-    /// </summary>
-    /// <param name="image">The image to be saved.</param>
-    /// <returns>The GUID that can later be used with <see cref="LoadFullImage"/>.</returns>
-    Task<Guid> SaveFile(Image image);
-
-
-}
-
-#region Implementation
+namespace ImageManager.Services.File;
 
 /// <summary>
 /// File‑system implementation of <see cref="IFileService"/>.
@@ -81,7 +38,7 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
     {
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-        await using var stream = File.Open(path, FileMode.Create);
+        await using var stream = System.IO.File.Open(path, FileMode.Create);
         await image.SaveAsPngAsync(stream);
     }
     private async Task SaveThumbnailImageAsync(Image image, string path)
@@ -94,7 +51,7 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
 
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-        await using var stream = File.Open(path, FileMode.Create);
+        await using var stream = System.IO.File.Open(path, FileMode.Create);
         await image.SaveAsJpegAsync(stream);
     }
 
@@ -107,7 +64,7 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
 
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-        await using var stream = File.Open(path, FileMode.Create);
+        await using var stream = System.IO.File.Open(path, FileMode.Create);
         await image.SaveAsJpegAsync(stream, jpegEncoder);
     }
 
@@ -119,7 +76,7 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
         var filePath = Path.Combine(_rootDirectory, $"{id}.png");
         // The call will throw FileNotFoundException if the file does not exist,
         // which callers can catch to indicate a missing image.
-        return await File.ReadAllBytesAsync(filePath);
+        return await System.IO.File.ReadAllBytesAsync(filePath);
     }
 
     /// <inheritdoc />
@@ -134,7 +91,7 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
             logger.LogInformation($"Thumbnail image not found: {id}, defaulting to full image");
             return await LoadFullImage(id);
         }
-        return await File.ReadAllBytesAsync(filePath);
+        return await System.IO.File.ReadAllBytesAsync(filePath);
     }
 
     /// <inheritdoc />
@@ -149,8 +106,7 @@ public class FileService(IConfiguration config, ILogger<FileService> logger) : I
             logger.LogInformation($"Compressed image not found: {id}, defaulting to full image");
             return await LoadFullImage(id);
         }
-        return await File.ReadAllBytesAsync(filePath);
+        return await System.IO.File.ReadAllBytesAsync(filePath);
     }
 }
 
-#endregion

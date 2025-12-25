@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Services;
+using ImageManager.Services.Character;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 #endregion

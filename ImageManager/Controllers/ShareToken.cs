@@ -40,22 +40,9 @@ public sealed class ShareTokenController(
         var user = await userManager.GetUserAsync(User);
         if (user is null) return Unauthorized();
 
-        Guid? tokenId;
-        try
-        {
-            tokenId = await tokenService.AddPlatformTokenAsync(
-                imageId,
-                request.Expiration,
-                user);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Internal error: {ex.Message}");
-        }
-
-        if (!tokenId.HasValue) return NotFound();
-
-        return Ok(tokenId.Value);
+        var tokenResult = await tokenService.AddPlatformTokenAsync(imageId, request.Expiration, user);
+        if (tokenResult.IsNone) return NotFound();
+        return Ok(tokenResult.Unwrap());
     }
     #endregion
 }

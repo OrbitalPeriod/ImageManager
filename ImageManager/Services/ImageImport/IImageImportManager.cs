@@ -1,6 +1,6 @@
 ﻿using ImageManager.Data.Models;
 
-namespace ImageManager.Services;
+namespace ImageManager.Services.ImageImport;
 
 public interface IImageImportManager
 {

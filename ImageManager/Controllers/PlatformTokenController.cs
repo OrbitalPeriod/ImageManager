@@ -1,4 +1,5 @@
-﻿using ImageManager.Data.Models;
+﻿using ImageManager.Data.Helpers;
+using ImageManager.Data.Models;
 using ImageManager.Services.PlatformTokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -77,12 +78,15 @@ public class PlatformTokenController(
 
         var result = await tokenService.DeleteTokenAsync(id, user);
 
-        return result switch
+        if (result.IsOk) return Ok();
+
+        var error = result.UnwrapError();
+
+        return error switch
         {
-            DeleteResult.NotFound => NotFound(),
-            DeleteResult.Forbidden => Forbid(),
-            DeleteResult.Deleted => Ok(),
-            _ => BadRequest()
+            DeleteError.NotFound => NotFound(),
+            DeleteError.Forbidden => Forbid(),
+            _ => throw new ArgumentOutOfRangeException()
         };
     }
 
@@ -102,11 +106,15 @@ public class PlatformTokenController(
         var user = await userManager.GetUserAsync(HttpContext.User);
         if (user == null) return Unauthorized();
         var result = await tokenService.QueueAsync(id, user);
-        return result switch
+
+        if (result.IsOk) return Ok();
+
+        var error = result.UnwrapError();
+
+        return error switch
         {
-            QueueResult.Ok => Ok(),
-            QueueResult.Forbidden => Forbid(),
-            QueueResult.NotFound => NotFound(),
+            QueueError.Forbidden => Forbid(),
+            QueueError.NotFound => NotFound(),
             _ => throw new ArgumentOutOfRangeException()
         };
     }

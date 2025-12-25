@@ -2,6 +2,7 @@
 
 using System.Threading.Channels;
 using ImageManager.Data;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 using ImageManager.Repositories.Repository_Interfaces;
@@ -83,18 +84,18 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
     /// Deletes the token identified by <paramref name="id"/> if it belongs to
     /// the supplied <paramref name="user"/>.
     /// </summary>
-    public async Task<DeleteResult> DeleteTokenAsync(Guid id, User user)
+    public async Task<Result<Unit, DeleteError>> DeleteTokenAsync(Guid id, User user)
     {
         if (user == null) throw new ArgumentNullException(nameof(user));
 
         var token = await platformTokenRepository.GetByIdAsync(id);
-        if (token == null) return DeleteResult.NotFound;
-        if (token.UserId != user.Id) return DeleteResult.Forbidden;
+        if (token == null) return Result<Unit, DeleteError>.Err(DeleteError.NotFound);
+        if (token.UserId != user.Id) return Result<Unit, DeleteError>.Err(DeleteError.Forbidden);
 
         // The repository’s key‑based delete performs a direct DELETE SQL statement.
         await platformTokenRepository.Delete(token.Id);
         await transactionService.SaveChangesAsync();
-        return DeleteResult.Deleted;
+        return Result<Unit, DeleteError>.Ok(Unit.New());
     }
 
 
@@ -104,14 +105,14 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
     #region Queue
 
     /// <inheritdoc/>
-    public async Task<QueueResult> QueueAsync(Guid id, User user)
+    public async Task<Result<Unit, QueueError>> QueueAsync(Guid id, User user)
     {
         var platformToken = await platformTokenRepository.GetByIdAsync(id);
-        if (platformToken == null) return QueueResult.NotFound;
-        if (platformToken.UserId != user.Id) return QueueResult.Forbidden;
+        if (platformToken == null) return Result<Unit, QueueError>.Err(QueueError.NotFound);
+        if (platformToken.UserId != user.Id) return Result<Unit, QueueError>.Err(QueueError.Forbidden);
 
         await platformSyncRequestChannel.Writer.WriteAsync(new PlatformSyncRequest(platformToken.Id));
-        return QueueResult.Ok;
+        return Result<Unit, QueueError>.Ok(Unit.New());
     }
 
     #endregion

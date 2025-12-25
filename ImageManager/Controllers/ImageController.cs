@@ -3,6 +3,8 @@ using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Services;
+using ImageManager.Services.File;
+using ImageManager.Services.ImageImport;
 using ImageManager.Services.Query;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -75,7 +77,7 @@ public class ImageController(
     /// Uploads a new image and returns its GUID.  
     /// Requires the caller to be authenticated.
     /// </summary>
-    [HttpPut("upload")]
+    [HttpPut()]
     [Authorize]
     [Consumes("multipart/form-data")]
     public async Task<IActionResult> Upload([FromForm] UploadImageRequest request)
@@ -83,15 +85,28 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
         if (user == null) return Unauthorized();
 
-        var imageId = await uploadImageService.UploadAsync(
+        var uploadResult = await uploadImageService.UploadAsync(
             request.File,
             request.Publicity ?? user.DefaultPublicity,
             user);
 
-        if (imageId == null)
-            return BadRequest("Failed to import image");
 
-        return Ok(imageId);
+        if (!uploadResult.IsOk)
+        {
+            var error = uploadResult.UnwrapError();
+            return error switch
+            {
+                ImportImageError.EmptyImage => BadRequest("Empy image"),
+                ImportImageError.FailedToGetTags => Problem("Tag retrieval failure"),
+                ImportImageError.ImageParseFailed => BadRequest("Invalid image format"),
+                ImportImageError.ImageStoreError => Problem("Image IO failure"),
+                ImportImageError.AlreadyOwned => BadRequest("Image is already owned"),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
+
+        var success = uploadResult.Unwrap();
+        return Ok(success.Id);
     }
 
     /// <summary>
@@ -107,13 +122,18 @@ public class ImageController(
 
         var result = await deleteImageService.DeleteAsync(imageId, user.Id);
 
-        return result switch
+        if (!result.IsOk)
         {
-            DeleteResult.NotFound => NotFound(),
-            DeleteResult.Forbidden => Forbid(),
-            DeleteResult.Deleted => Ok(),
-            _ => BadRequest()
-        };
+            var error = result.UnwrapError();
+            return error switch
+            {
+                DeleteError.NotFound => NotFound(),
+                DeleteError.Forbidden => Forbid(),
+                _ => throw new ArgumentOutOfRangeException()
+            };
+        }
+
+        return Ok();
     }
 
     /// <summary>

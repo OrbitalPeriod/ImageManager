@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using ImageManager.Data;                // <-- your DbContext namespace
+using ImageManager.Data;
+using ImageManager.Data.Helpers; // <-- your DbContext namespace
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ImageManager.Services;
@@ -85,6 +86,55 @@ public static class TransactionServiceExtensions
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Takes a function that Returns a option, rolls back if it is None or excepts
+    /// </summary>
+    public static async Task<Option<T>> UseTransactionAsync<T>(this ITransactionService tx,
+        Func<Task<Option<T>>> action)
+    {
+        await using var transaction = await tx.BeginTransactionAsync();
+        try
+        {
+            var result = await action();
+
+            if (result.IsNone)
+            {
+                await transaction.RollbackAsync();
+                return Option<T>.None();
+            }
+
+            await tx.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return result;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            return Option<T>.None();
+        }
+    }
+
+    /// <summary>
+    /// Takes a function that Returns a Result, rolls back if it is Err variant, returns and commits transaction if Ok
+    /// </summary>
+    public static async Task<Result<T, E>> UseTransactionAsync<T, E>(this ITransactionService tx,
+        Func<Task<Result<T, E>>> action)
+    {
+        await using var transaction = await tx.BeginTransactionAsync();
+        var result = await action();
+
+        if (!result.IsOk)
+        {
+            await transaction.RollbackAsync();
+            return result;
+        }
+
+        await tx.SaveChangesAsync();
+        await transaction.CommitAsync();
+        return result;
+
     }
 
     /// <summary>

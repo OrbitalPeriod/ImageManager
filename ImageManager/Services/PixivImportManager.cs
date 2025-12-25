@@ -1,9 +1,11 @@
 ﻿#region Usings
 
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 using ImageManager.Repositories.Implementations;
 using ImageManager.Repositories.Repository_Interfaces;
+using ImageManager.Services.ImageImport;
 using PixivCS.Models.Illust;
 
 #endregion
@@ -40,7 +42,7 @@ public class PixivImportManager(
         if (token.Platform != Platform.Pixiv)
             throw new ArgumentException("Token must be Pixiv", nameof(token));
 
-
+        //TODO: Somehow get rid of this exception nonsense
         try
         {
             var user = await userRepository.GetByIdAsync(token.UserId);
@@ -77,15 +79,15 @@ public class PixivImportManager(
 
             foreach (var illustration in toDownload)
             {
-                try
+                var downloadImage = await DownloadImage(user, illustration);
+                if (downloadImage.IsSome)
                 {
-                    await DownloadImage(user, illustration);
                     successCount++;
                 }
-                catch (Exception ex)
+                else
                 {
                     failCount++;
-                    logger.LogError(ex,
+                    logger.LogError(
                         "Failed to download or import illustration {IllustrationId} ({Title}) for user {UserName} ({UserId})",
                         illustration.Id, illustration.Title, user.UserName, token.UserId);
                 }
@@ -147,54 +149,64 @@ public class PixivImportManager(
     /// <summary>
     /// Downloads a single illustration and imports it into the system.
     /// </summary>
-    private async Task DownloadImage(User user, IllustInfo illustration)
+    private async Task<Option<Unit>> DownloadImage(User user, IllustInfo illustration)
     {
-        await using var transaction = await transactionService.BeginTransactionAsync();
-        try
+        var result = await transactionService.UseTransactionAsync(async () =>
         {
-            byte[] imageBytes;
-            try
+            var imageBytes = await pixivService.DownloadImage(illustration);
+
+            var imageImportResult = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, user.Id);
+
+            if (!imageImportResult.IsOk)
             {
-                imageBytes = await pixivService.DownloadImage(illustration);
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex,
-                    "Failed to download image for illustration {IllustrationId} ({Title})",
-                    illustration.Id, illustration.Title);
-                await transaction.RollbackAsync();
-                return;
+                var error = imageImportResult.UnwrapError();
+                switch (error)
+                {
+                    case ImportImageError.AlreadyOwned:
+                        logger.LogError("Importing image: {illustrationId} already owned by {UserName} ({UserId})}", illustration.Id, user.UserName, user.Id);
+                        break;
+                    case ImportImageError.EmptyImage:
+                        logger.LogError("Importing image: {illustrationId} empty image", illustration.Id);
+                        break;
+                    case ImportImageError.FailedToGetTags:
+                        logger.LogError("Failed to get tags for image: {illustrationId}", illustration.Id);
+                        break;
+                    case ImportImageError.ImageParseFailed:
+                        logger.LogError("Failed to parse image: {illustrationId}", illustration.Id);
+                        break;
+                    case ImportImageError.ImageStoreError:
+                        logger.LogError("Failed to store image: {illustrationId}", illustration.Id);
+                        break;
+                }
+                return Option<Guid>.None();
             }
 
-            var imageId = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, user.Id);
-            if (imageId == null)
-            {
-                logger.LogError("Failed to import image for illustration {IllustrationId} ({Title})",
-                    illustration.Id, illustration.Title);
-                await transaction.RollbackAsync();
-                return;
-            }
+            var imageSuccessResult = imageImportResult.Unwrap();
 
             // Check if image is already in downloaded
-            if (!await downloadedImageRepository.ImageInDownloaded((Guid)imageId))
+            if (imageSuccessResult.NewFile)
             {
                 await downloadedImageRepository.AddAsync(new DownloadedImage
                 {
                     Platform = Platform.Pixiv,
                     PlatformImageId = illustration.Id,
-                    ImageId = (Guid)imageId,
+                    ImageId = imageSuccessResult.Id,
                 });
             }
 
-            await transactionService.SaveChangesAsync();
-            await transaction.CommitAsync();
+            return Option<Guid>.Some(imageSuccessResult.Id);
+        });
+
+        if (result.IsNone)
+        {
+            logger.LogError("Unexpected error while processing illustration {IllustrationId}", illustration.Id);
+        }
+        else
+        {
             logger.LogInformation("Successfully downloaded and imported illustration {IllustrationId}", illustration.Id);
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Unexpected error while processing illustration {IllustrationId}", illustration.Id);
-            await transaction.RollbackAsync();
-        }
+
+        return result.Map(_ => Unit.New());
     }
 }
 #endregion

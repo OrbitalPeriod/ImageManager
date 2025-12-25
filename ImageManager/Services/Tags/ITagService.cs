@@ -1,7 +1,5 @@
-﻿#region Usings
-using ImageManager.Data.Models;
+﻿using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
-#endregion
 
 namespace ImageManager.Services.Tags;
 
