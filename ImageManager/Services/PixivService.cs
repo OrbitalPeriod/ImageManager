@@ -57,7 +57,7 @@ public sealed class PixivService : IPixivService
         {
             MaxRetries = 3,
             EnableRetry = true,
-            TimeoutMs = 3000
+            TimeoutMs = 10000
         });
     }
 

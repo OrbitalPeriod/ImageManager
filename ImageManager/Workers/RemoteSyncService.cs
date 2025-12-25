@@ -68,6 +68,7 @@ public class RemoteSyncService(
                     PlatformTokenId = platformToken.Id,
                     Success = true,
                 });
+                await transactionRepo.SaveChangesAsync(stoppingToken);
             }
             catch (Exception ex) when (!(ex is OperationCanceledException))
             {

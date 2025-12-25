@@ -122,6 +122,8 @@ public class PixivImportManager(
                         await userOwnedImageRepository.AddAsync(userLink);
                     }
 
+                await transactionService.SaveChangesAsync();
+
                 logger.LogInformation("Added {Count} existing illustrations for user {UserName} ({UserId})",
                     newUserLinks.Count, user.UserName, token.UserId);
             }
