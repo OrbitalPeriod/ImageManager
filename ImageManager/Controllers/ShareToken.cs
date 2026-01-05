@@ -13,6 +13,7 @@ namespace ImageManager.Controllers;
 /// platform‑token for a specific image.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public sealed class ShareTokenController(
     UserManager<User> userManager,

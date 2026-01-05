@@ -12,6 +12,7 @@ using ImageManager.Services.File;
 using ImageManager.Services.ImageImport;
 using ImageManager.Services.PlatformTokens;
 using ImageManager.Services.Query;
+using ImageManager.Services.ShareToken;
 using ImageManager.Services.Tags;
 using ImageManager.Services.UserInfo;
 using ImageManager.Workers;
@@ -90,6 +91,7 @@ builder.Services.AddScoped<IUploadImageService, UploadImageService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICharacterQueryService, CharacterQueryService>();
 builder.Services.AddScoped<IInitialUserCreationService, InitialUserCreationService>();
+builder.Services.AddScoped<IShareTokenService, ShareTokenService>();
 
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IUserInfoService, UserInfoService>();

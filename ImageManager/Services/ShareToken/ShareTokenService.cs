@@ -13,7 +13,8 @@ namespace ImageManager.Services.ShareToken;
 /// </summary>
 public class ShareTokenService(
     IUserOwnedImageRepository userOwnedImageRepository,
-    IShareTokenRepository shareTokenRepository) : IShareTokenService
+    IShareTokenRepository shareTokenRepository,
+    ITransactionService transactionService) : IShareTokenService
 {
     /// <inheritdoc />
     public async Task<Option<Guid>> AddPlatformTokenAsync(Guid imageId, DateTime? expiration, User user)
@@ -38,6 +39,8 @@ public class ShareTokenService(
 
         // Persist the token via the repository layer.
         await shareTokenRepository.AddAsync(shareToken);
+
+        await transactionService.SaveChangesAsync();
 
         return Option<Guid>.Some(shareToken.Id);
     }
