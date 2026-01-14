@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 using ImageManager.Data.Models;
 using ImageManager.Services.ShareToken;
 using Microsoft.AspNetCore.Authorization;
@@ -34,6 +34,9 @@ public sealed class ShareTokenController(
     /// </returns>
     [Authorize]
     [HttpPost("add/{imageId:guid}")]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddPlatformToken(
         Guid imageId,
         [FromBody] AddPlatformTokenRequest request)

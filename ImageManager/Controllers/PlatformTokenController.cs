@@ -1,4 +1,4 @@
-﻿using ImageManager.Data.Helpers;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Extensions;
 using ImageManager.Services.PlatformTokens;
@@ -24,6 +24,8 @@ public class PlatformTokenController(
     /// </summary>
     [Authorize]
     [HttpPut("add")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> AddToken([FromBody] AddTokenRequest request)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
@@ -42,6 +44,8 @@ public class PlatformTokenController(
     /// </summary>
     [Authorize]
     [HttpGet]
+    [ProducesResponseType(typeof(IReadOnlyCollection<PlatformTokenDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetPlatformTokens()
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
@@ -51,8 +55,14 @@ public class PlatformTokenController(
         return Ok(tokens);
     }
 
+    /// <summary>
+    /// Retrieves sync logs for a specific platform token.
+    /// </summary>
     [Authorize]
     [HttpGet("{id:guid}/logs")]
+    [ProducesResponseType(typeof(IReadOnlyCollection<PlatformTokenSyncLog>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IReadOnlyCollection<PlatformTokenSyncLog>>> GetPlatformTokenLogs(Guid id)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
@@ -72,6 +82,11 @@ public class PlatformTokenController(
     /// </summary>
     [Authorize]
     [HttpDelete("{id:Guid}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> DeletePlatformToken(Guid id)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
@@ -92,6 +107,11 @@ public class PlatformTokenController(
     /// <returns></returns>
     [Authorize]
     [HttpPost("{id:Guid}/run")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> RunPlatformToken(Guid id)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);

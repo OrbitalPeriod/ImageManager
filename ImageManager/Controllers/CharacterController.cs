@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
@@ -35,6 +35,9 @@ public class CharacterController(
     /// <param name="page">Page number (1‑based).</param>
     /// <param name="pageSize">Number of items per page.</param>
     [HttpGet]
+    [ProducesResponseType(typeof(PaginatedResponse<GetCharacterResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<PaginatedResponse<GetCharacterResponse>>> GetCharacters(
         [FromQuery] Guid? token,
         [FromQuery, Range(1, int.MaxValue)] int page = 1,
@@ -58,6 +61,9 @@ public class CharacterController(
     /// <param name="page">Page number (1‑based).</param>
     /// <param name="pageSize">Number of items per page.</param>
     [HttpGet("search")]
+    [ProducesResponseType(typeof(PaginatedResponse<GetCharacterResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<PaginatedResponse<GetCharacterResponse>>> SearchCharacters(
         [FromQuery] string q = "",
         [FromQuery] Guid? token = null,

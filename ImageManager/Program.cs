@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 
 using System.Threading.Channels;
 using ImageManager.Data;
@@ -143,6 +143,14 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Backend to manage and access images",
         Version = "v1"
     });
+    
+    // Include XML comments for better documentation
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
 });
 
 builder.Services.AddControllers();
