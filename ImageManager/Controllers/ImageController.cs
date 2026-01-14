@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
+using ImageManager.Extensions;
 using ImageManager.Services;
 using ImageManager.Services.File;
 using ImageManager.Services.ImageImport;
@@ -70,7 +71,7 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageQueryService.GetImagesAsync(user, token, page, pageSize);
-        return Ok(result);
+        return this.ToActionResult(result);
     }
 
     /// <summary>
@@ -80,7 +81,7 @@ public class ImageController(
     [HttpPut()]
     [Authorize]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> Upload([FromForm] UploadImageRequest request)
+    public async Task<ActionResult<Guid>> Upload([FromForm] UploadImageRequest request)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
         if (user == null) return Unauthorized();
@@ -90,23 +91,7 @@ public class ImageController(
             request.Publicity ?? user.DefaultPublicity,
             user);
 
-
-        if (!uploadResult.IsOk)
-        {
-            var error = uploadResult.UnwrapError();
-            return error switch
-            {
-                ImportImageError.EmptyImage => BadRequest("Empy image"),
-                ImportImageError.FailedToGetTags => Problem("Tag retrieval failure"),
-                ImportImageError.ImageParseFailed => BadRequest("Invalid image format"),
-                ImportImageError.ImageStoreError => Problem("Image IO failure"),
-                ImportImageError.AlreadyOwned => BadRequest("Image is already owned"),
-                _ => throw new ArgumentOutOfRangeException()
-            };
-        }
-
-        var success = uploadResult.Unwrap();
-        return Ok(success.Id);
+        return this.ToActionResult(uploadResult.Map(success => success.Id));
     }
 
     /// <summary>
@@ -121,24 +106,12 @@ public class ImageController(
         if (user == null) return Unauthorized();
 
         var result = await deleteImageService.DeleteAsync(imageId, user.Id);
-
-        if (!result.IsOk)
-        {
-            var error = result.UnwrapError();
-            return error switch
-            {
-                DeleteError.NotFound => NotFound(),
-                DeleteError.Forbidden => Forbid(),
-                _ => throw new ArgumentOutOfRangeException()
-            };
-        }
-
-        return Ok();
+        return this.ToActionResult(result);
     }
 
     /// <summary>
     /// Retrieves public metadata for an image (tags, characters, rating, owners).  
-    /// Access is validated against the supplied token.
+    /// Access is validated against the supplied token.q
     /// </summary>
     [HttpGet("{imageId:guid}/data")]
     public async Task<ActionResult<ImageDataResponse>> Data(Guid imageId, [FromQuery] Guid? token)
@@ -146,14 +119,7 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageDataAccessAsync(imageId, user, token);
-        if (!result.Found) return NotFound();
-        if (!result.Allowed) return Forbid();
-
-        var data = result.Data;
-        if (data == null)
-            return NotFound("Image data not found.");
-
-        return Ok(data);
+        return this.ToActionResult(result);
     }
 
     /// <summary>
@@ -166,13 +132,12 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
-        if (!result.Found) return NotFound();
-        if (!result.Allowed) return Forbid();
+        if (!result.IsOk)
+        {
+            return this.ToActionResultForError(result);
+        }
 
-        var image = result.Image;
-        if (image == null)
-            return NotFound("Requested image not found.");
-
+        var image = result.Unwrap();
         // Return the image file
         return await ReturnCompressed(image);
     }
@@ -188,13 +153,12 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
-        if (!result.Found) return NotFound();
-        if (!result.Allowed) return Forbid();
+        if (!result.IsOk)
+        {
+            return this.ToActionResultForError(result);
+        }
 
-        var image = result.Image;
-        if (image == null)
-            return NotFound("Requested image not found.");
-
+        var image = result.Unwrap();
         // Return the image file
         return await ReturnImage(image);
     }
@@ -205,13 +169,12 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
-        if (!result.Found) return NotFound();
-        if (!result.Allowed) return Forbid();
+        if (!result.IsOk)
+        {
+            return this.ToActionResultForError(result);
+        }
 
-        var image = result.Image;
-        if (image == null)
-            return NotFound("Requested image not found.");
-
+        var image = result.Unwrap();
         // Return the image file
         return await ReturnThumbnail(image);
     }
@@ -229,7 +192,7 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageQueryService.SearchImagesAsync(user, request, page, pageSize);
-        return Ok(result);
+        return this.ToActionResult(result);
     }
     #endregion
 

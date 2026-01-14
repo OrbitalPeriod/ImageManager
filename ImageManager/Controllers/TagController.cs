@@ -2,6 +2,7 @@
 
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
+using ImageManager.Extensions;
 using ImageManager.Services.Tags;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -35,24 +36,11 @@ public sealed class TagController(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        // Validate paging parameters
-        if (page < 1) page = 1;
-        if (pageSize is < 1 or > 200) pageSize = 200;
-
         var user = await userManager.GetUserAsync(User);
         if (user is null) return Unauthorized();
 
-        PaginatedResponse<TagCountDto> result;
-        try
-        {
-            result = await tagService.GetTagsAsync(user, token, page, pageSize);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Internal error: {ex.Message}");
-        }
-
-        return Ok(result);
+        var result = await tagService.GetTagsAsync(user, token, page, pageSize);
+        return this.ToActionResult(result);
     }
 
     /// <summary>
@@ -72,23 +60,11 @@ public sealed class TagController(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        if (page < 1) page = 1;
-        if (pageSize is < 1 or > 200) pageSize = 200;
-
         var user = await userManager.GetUserAsync(User);
         if (user is null) return Unauthorized();
 
-        PaginatedResponse<TagCountDto> result;
-        try
-        {
-            result = await tagService.SearchTagsAsync(user, q, token, page, pageSize);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Internal error: {ex.Message}");
-        }
-
-        return Ok(result);
+        var result = await tagService.SearchTagsAsync(user, q, token, page, pageSize);
+        return this.ToActionResult(result);
     }
 
     #endregion

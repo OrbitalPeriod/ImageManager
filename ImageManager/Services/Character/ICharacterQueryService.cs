@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using ImageManager.Controllers;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 
@@ -23,7 +24,7 @@ public interface ICharacterQueryService
     /// <param name="page">1‑based page number.</param>
     /// <param name="pageSize">Number of items per page.</param>
     /// <returns>A paginated response containing character counts.</returns>
-    Task<PaginatedResponse<CharacterController.GetCharacterResponse>> GetCharactersAsync(
+    Task<Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>> GetCharactersAsync(
         User? user,
         Guid? token,
         int page,
@@ -39,7 +40,7 @@ public interface ICharacterQueryService
     /// <param name="page">1‑based page number.</param>
     /// <param name="pageSize">Number of items per page (max 200).</param>
     /// <returns>A paginated response containing matching characters.</returns>
-    Task<PaginatedResponse<CharacterController.GetCharacterResponse>> SearchAsync(
+    Task<Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>> SearchAsync(
         User? user,
         Guid? token,
         string searchTerm,

@@ -1,5 +1,6 @@
 ﻿#region Usings
 
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Repositories;
@@ -17,14 +18,14 @@ namespace ImageManager.Services.Tags;
 public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : ITagService
 {
     /// <inheritdoc />
-    public async Task<PaginatedResponse<TagCountDto>> GetTagsAsync(
+    public async Task<Result<PaginatedResponse<TagCountDto>, TagError>> GetTagsAsync(
         User? user,
         Guid? token,
         int page,
         int pageSize)
     {
-        if (page < 1) throw new ArgumentOutOfRangeException(nameof(page), "Page must be >= 1");
-        if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be > 0");
+        if (page < 1 || pageSize <= 0)
+            return Result<PaginatedResponse<TagCountDto>, TagError>.Err(TagError.InvalidPagination);
 
         var baseQuery = userOwnedImageRepository.AccessibleImages(user, token);
 
@@ -43,26 +44,26 @@ public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : IT
             .Take(pageSize)
             .ToListAsync();
 
-        return new PaginatedResponse<TagCountDto>
+        return Result<PaginatedResponse<TagCountDto>, TagError>.Ok(new PaginatedResponse<TagCountDto>
         {
             Data = tags.ToArray(),
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
-        };
+        });
     }
 
     /// <inheritdoc />
-    public async Task<PaginatedResponse<TagCountDto>> SearchTagsAsync(
+    public async Task<Result<PaginatedResponse<TagCountDto>, TagError>> SearchTagsAsync(
         User? user,
         string q,
         Guid? token,
         int page,
         int pageSize)
     {
-        if (page < 1) throw new ArgumentOutOfRangeException(nameof(page), "Page must be >= 1");
-        if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be > 0");
+        if (page < 1 || pageSize <= 0)
+            return Result<PaginatedResponse<TagCountDto>, TagError>.Err(TagError.InvalidPagination);
 
         var baseQuery = userOwnedImageRepository.AccessibleImages(user, token);
 
@@ -90,13 +91,13 @@ public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : IT
             .Take(pageSize)
             .ToListAsync();
 
-        return new PaginatedResponse<TagCountDto>
+        return Result<PaginatedResponse<TagCountDto>, TagError>.Ok(new PaginatedResponse<TagCountDto>
         {
             Data = tags.ToArray(),
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
-        };
+        });
     }
 }

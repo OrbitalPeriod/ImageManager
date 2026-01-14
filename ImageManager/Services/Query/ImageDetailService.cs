@@ -1,4 +1,5 @@
 ﻿using ImageManager.Controllers;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
 using ImageManager.Repositories.Repository_Interfaces;
@@ -12,35 +13,39 @@ namespace ImageManager.Services.Query;
 public class ImageDetailService(IImageRepository imageRepository) : IImageDetailService
 {
     /// <inheritdoc />
-    public async Task<ImageAccessResult> GetImageAccessAsync(
+    public async Task<Result<Image, ImageError>> GetImageAccessAsync(
         Guid imageId,
         User? user,
         Guid? token)
     {
-        var image = await imageRepository.GetByIdAsync(imageId);
-        if (image == null) return new ImageAccessResult { Found = false };
+        var imageOption = await imageRepository.GetByIdAsync(imageId);
+        if (imageOption.IsNone)
+            return Result<Image, ImageError>.Err(ImageError.NotFound);
 
+        var image = imageOption.Unwrap();
         var allowed = await imageRepository.CanAccessImageAsync(user, image, token);
+        
+        if (!allowed)
+            return Result<Image, ImageError>.Err(ImageError.Forbidden);
 
-        return new ImageAccessResult
-        {
-            Found = true,
-            Allowed = allowed,
-            Image = image
-        };
+        return Result<Image, ImageError>.Ok(image);
     }
 
     /// <inheritdoc />
-    public async Task<ImageDataAccessResult> GetImageDataAccessAsync(
+    public async Task<Result<ImageController.ImageDataResponse, ImageError>> GetImageDataAccessAsync(
         Guid imageId,
         User? user,
         Guid? token)
     {
-        var image = await imageRepository.GetByIdFullAsync(imageId);
-        if (image == null) return new ImageDataAccessResult { Found = false };
+        var imageOption = await imageRepository.GetByIdFullAsync(imageId);
+        if (imageOption.IsNone)
+            return Result<ImageController.ImageDataResponse, ImageError>.Err(ImageError.NotFound);
 
+        var image = imageOption.Unwrap();
         var allowed = await imageRepository.CanAccessImageAsync(user, image, token);
-        if (!allowed) return new ImageDataAccessResult { Found = true, Allowed = false };
+        
+        if (!allowed)
+            return Result<ImageController.ImageDataResponse, ImageError>.Err(ImageError.Forbidden);
 
         var data = new ImageController.ImageDataResponse(
             image.Id,
@@ -49,11 +54,6 @@ public class ImageDetailService(IImageRepository imageRepository) : IImageDetail
             image.AgeRating,
             image.UserOwnedImages.Select(uoi => uoi.UserId).ToArray());
 
-        return new ImageDataAccessResult
-        {
-            Found = true,
-            Allowed = true,
-            Data = data
-        };
+        return Result<ImageController.ImageDataResponse, ImageError>.Ok(data);
     }
 }

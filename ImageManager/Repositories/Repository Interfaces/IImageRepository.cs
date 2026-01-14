@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories.Abstract_Interfaces;
 
@@ -18,6 +19,6 @@ public interface IImageRepository : IRepository<Image, Guid>, IExistsRepository<
 
     // The `public` modifier is removed – interface members are implicitly public.
     IQueryable<UserOwnedImage> AccessibleImages(User? user, Guid? token);
-    Task<Image?> GetByHashAsync(ulong hash);
-    Task<Image?> GetByIdFullAsync(Guid id);
+    Task<Option<Image>> GetByHashAsync(ulong hash);
+    Task<Option<Image>> GetByIdFullAsync(Guid id);
 }

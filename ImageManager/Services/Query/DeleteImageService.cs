@@ -1,5 +1,6 @@
 ﻿using ImageManager.Data;
 using ImageManager.Data.Helpers;
+using ImageManager.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace ImageManager.Services.Query;
@@ -9,22 +10,25 @@ namespace ImageManager.Services.Query;
 /// Uses the application's <see cref="ApplicationDbContext"/> to locate and delete
 /// a <c>UserOwnedImage</c> record that matches the supplied identifiers.
 /// </summary>
-public class DeleteImageService(ApplicationDbContext dbContext) : IDeleteImageService
+public class DeleteImageService(
+    ApplicationDbContext dbContext,
+    ITransactionService transactionService) : IDeleteImageService
 {
     public async Task<Result<Unit, DeleteError>> DeleteAsync(Guid imageId, string userId)
     {
         if (userId == null) throw new ArgumentNullException(nameof(userId));
 
-        var uoi = await dbContext.UserOwnedImages
-            .FirstOrDefaultAsync(u => u.ImageId == imageId);
+        return await transactionService.UseTransactionAsync(async () =>
+        {
+            var uoi = await dbContext.UserOwnedImages
+                .FirstOrDefaultAsync(u => u.ImageId == imageId);
 
-        if (uoi == null) return Result<Unit, DeleteError>.Err(DeleteError.NotFound);
+            if (uoi == null) return Result<Unit, DeleteError>.Err(DeleteError.NotFound);
 
-        if (uoi.UserId != userId) return Result<Unit, DeleteError>.Err(DeleteError.Forbidden);
+            if (uoi.UserId != userId) return Result<Unit, DeleteError>.Err(DeleteError.Forbidden);
 
-        dbContext.UserOwnedImages.Remove(uoi);
-        await dbContext.SaveChangesAsync();
-
-        return Result<Unit, DeleteError>.Ok(Unit.New());
+            dbContext.UserOwnedImages.Remove(uoi);
+            return Result<Unit, DeleteError>.Ok(Unit.New());
+        });
     }
 }

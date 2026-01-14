@@ -31,7 +31,6 @@ public class PixivImportManager(
     IImageImportService imageImportService,
     ILogger<PixivImportManager> logger,
     IUserRepository userRepository,
-    IPlatformTokenRepository platformTokenRepository,
     IDownloadedImageRepository downloadedImageRepository,
     IUserOwnedImageRepository userOwnedImageRepository,
     ITransactionService transactionService) : IPixivImageImportManager
@@ -45,14 +44,36 @@ public class PixivImportManager(
         //TODO: Somehow get rid of this exception nonsense
         try
         {
-            var user = await userRepository.GetByIdAsync(token.UserId);
-
-            if (user == null) throw new ArgumentException("User not found", nameof(token));
+            var userOption = await userRepository.GetByIdAsync(token.UserId);
+            if (userOption.IsNone) throw new ArgumentException("User not found", nameof(token));
+            var user = userOption.Unwrap();
 
             logger.LogInformation("Starting Pixiv import for user {UserName} ({UserId})",
                 user.UserName, token.UserId);
 
-            var bookmarks = await pixivService.GetLikedBookmarks(token.PlatformUserId, token.Token, token.CheckPrivate);
+            var bookmarksResult = await pixivService.GetLikedBookmarks(token.PlatformUserId, token.Token, token.CheckPrivate);
+            
+            if (!bookmarksResult.IsOk)
+            {
+                var error = bookmarksResult.UnwrapError();
+                var errorMessage = error switch
+                {
+                    PixivError.Timeout => "Request timed out",
+                    PixivError.NetworkError => "Network connectivity error",
+                    PixivError.AuthenticationFailed => "Authentication failed",
+                    PixivError.RateLimited => "Rate limit exceeded",
+                    PixivError.ApiError => "API error",
+                    PixivError.InvalidInput => "Invalid input parameters",
+                    _ => "Unknown error"
+                };
+                
+                logger.LogError(
+                    "Failed to fetch bookmarks for user {UserName} ({UserId}): {Error}",
+                    user.UserName, token.UserId, errorMessage);
+                return;
+            }
+
+            var bookmarks = bookmarksResult.Unwrap();
 
             if (!bookmarks.Any())
             {
@@ -87,7 +108,7 @@ public class PixivImportManager(
                 else
                 {
                     failCount++;
-                    logger.LogError(
+                    logger.LogWarning(
                         "Failed to download or import illustration {IllustrationId} ({Title}) for user {UserName} ({UserId})",
                         illustration.Id, illustration.Title, user.UserName, token.UserId);
                 }
@@ -153,7 +174,29 @@ public class PixivImportManager(
     {
         var result = await transactionService.UseTransactionAsync(async () =>
         {
-            var imageBytes = await pixivService.DownloadImage(illustration);
+            var downloadResult = await pixivService.DownloadImage(illustration);
+            
+            if (!downloadResult.IsOk)
+            {
+                var error = downloadResult.UnwrapError();
+                var errorMessage = error switch
+                {
+                    PixivError.Timeout => "Download timed out",
+                    PixivError.NetworkError => "Network connectivity error during download",
+                    PixivError.AuthenticationFailed => "Authentication failed during download",
+                    PixivError.RateLimited => "Rate limit exceeded during download",
+                    PixivError.DownloadFailed => "Download failed",
+                    PixivError.InvalidInput => "Invalid illustration data",
+                    _ => "Unknown download error"
+                };
+                
+                logger.LogWarning(
+                    "Failed to download illustration {IllustrationId} ({Title}): {Error}",
+                    illustration.Id, illustration.Title, errorMessage);
+                return Option<Guid>.None();
+            }
+
+            var imageBytes = downloadResult.Unwrap();
 
             var imageImportResult = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, user.Id);
 

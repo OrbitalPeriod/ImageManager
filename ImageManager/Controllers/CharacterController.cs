@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
+using ImageManager.Extensions;
 using ImageManager.Services;
 using ImageManager.Services.Character;
 using Microsoft.AspNetCore.Identity;
@@ -17,7 +18,6 @@ namespace ImageManager.Controllers;
 [Route("api/characters")]
 public class CharacterController(
     UserManager<User> userManager,
-    ILogger<CharacterController> logger,
     ICharacterQueryService queryService) : ControllerBase
 {
     #region DTOs / Records
@@ -47,7 +47,7 @@ public class CharacterController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await queryService.GetCharactersAsync(user, token, page, pageSize);
-        return Ok(result);
+        return this.ToActionResult(result);
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ public class CharacterController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await queryService.SearchAsync(user, token, q, page, pageSize);
-        return Ok(result);
+        return this.ToActionResult(result);
     }
     #endregion
 }

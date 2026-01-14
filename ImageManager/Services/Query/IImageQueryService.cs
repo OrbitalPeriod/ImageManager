@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using ImageManager.Controllers;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 
@@ -19,7 +20,7 @@ public interface IImageQueryService
     /// Retrieves a page of images that the caller can access.
     /// The returned data contains only the image Id and age rating.
     /// </summary>
-    Task<PaginatedResponse<ImageController.GetImagesResponse>> GetImagesAsync(
+    Task<Result<PaginatedResponse<ImageController.GetImagesResponse>, ImageError>> GetImagesAsync(
         User? user,
         Guid? token,
         int page,
@@ -29,7 +30,7 @@ public interface IImageQueryService
     /// Searches for images that match the supplied filter criteria.
     /// The returned data contains only the image Id and age rating.
     /// </summary>
-    Task<PaginatedResponse<ImageController.GetSearchImagesResponse>> SearchImagesAsync(
+    Task<Result<PaginatedResponse<ImageController.GetSearchImagesResponse>, ImageError>> SearchImagesAsync(
         User? user,
         ImageController.GetSearchImagesRequest request,
         int page,

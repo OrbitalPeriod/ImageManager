@@ -25,9 +25,10 @@ public class UserInfoService(
         if (string.IsNullOrEmpty(userId)) return Option<GetUserInfoResponse>.None();
 
         // Load the full user entity to expose all required properties.
-        var user = await userRepository.GetByIdAsync(userId);
-        if (user == null) return Option<GetUserInfoResponse>.None();
+        var userOption = await userRepository.GetByIdAsync(userId);
+        if (userOption.IsNone) return Option<GetUserInfoResponse>.None();
 
+        var user = userOption.Unwrap();
         return Option<GetUserInfoResponse>.Some(new GetUserInfoResponse(
             user.Id,
             user.UserName,

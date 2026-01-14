@@ -50,13 +50,14 @@ public class ImageImportService(
         // --------------------------------------------------------------------
         // 4️⃣  Look for an existing image by hash via the repository
         // --------------------------------------------------------------------
-        var existingImage = await imageRepository.GetByHashAsync(hash);
+        var existingImageOption = await imageRepository.GetByHashAsync(hash);
 
         Guid imageGuid;
 
-        if (existingImage != null)
+        if (existingImageOption.IsSome)
         {
             // Existing image – use its Id
+            var existingImage = existingImageOption.Unwrap();
             imageGuid = existingImage.Id;
 
             // ---- Ensure the user is listed as an owner ---------------------------------
@@ -88,7 +89,7 @@ public class ImageImportService(
         {
             imageData = await taggerService.GetTags(imageBytes);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return Result<ImportImageSuccess, ImportImageError>.Err(ImportImageError.FailedToGetTags);
         }

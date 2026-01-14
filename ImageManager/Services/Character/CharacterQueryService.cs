@@ -1,4 +1,5 @@
 ﻿using ImageManager.Controllers;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Repositories.Repository_Interfaces;
@@ -13,14 +14,14 @@ namespace ImageManager.Services.Character;
 public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepository) : ICharacterQueryService
 {
     /// <inheritdoc />
-    public async Task<PaginatedResponse<CharacterController.GetCharacterResponse>> GetCharactersAsync(
+    public async Task<Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>> GetCharactersAsync(
         User? user,
         Guid? token,
         int page,
         int pageSize)
     {
-        if (page < 1) throw new ArgumentOutOfRangeException(nameof(page), "Page must be >= 1");
-        if (pageSize <= 0) throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be > 0");
+        if (page < 1 || pageSize <= 0)
+            return Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>.Err(CharacterError.InvalidPagination);
 
         var baseQuery = userOwnedImageRepository.AccessibleImages(user, token);
 
@@ -49,18 +50,18 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
             .Select(x => new CharacterController.GetCharacterResponse(x.Id, x.Name, x.Count))
             .ToArrayAsync();
 
-        return new PaginatedResponse<CharacterController.GetCharacterResponse>
+        return Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>.Ok(new PaginatedResponse<CharacterController.GetCharacterResponse>
         {
             Data = characters,
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
-        };
+        });
     }
 
     /// <inheritdoc />
-    public async Task<PaginatedResponse<CharacterController.GetCharacterResponse>> SearchAsync(
+    public async Task<Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>> SearchAsync(
         User? user,
         Guid? token,
         string searchTerm,
@@ -68,8 +69,8 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
         int pageSize)
     {
         // Normalise paging parameters and guard against unreasonable values
-        if (page < 1) page = 1;
-        if (pageSize is < 1 or > 200) pageSize = 200;
+        if (page < 1 || pageSize <= 0 || pageSize > 200)
+            return Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>.Err(CharacterError.InvalidPagination);
 
         var baseQuery = userOwnedImageRepository.AccessibleImages(user, token);
 
@@ -102,7 +103,7 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
             .Take(pageSize)
             .ToListAsync();
 
-        return new PaginatedResponse<CharacterController.GetCharacterResponse>
+        return Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>.Ok(new PaginatedResponse<CharacterController.GetCharacterResponse>
         {
             Data = pageData.Select(p => new CharacterController.GetCharacterResponse(
                 p.Id,
@@ -112,7 +113,7 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
             PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
-        };
+        });
     }
 }
 

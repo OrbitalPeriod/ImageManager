@@ -1,6 +1,7 @@
 ﻿#region Usings
 
 using ImageManager.Data;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories.Abstract_Interfaces;
 using ImageManager.Repositories.Repository_Interfaces;
@@ -75,24 +76,26 @@ public class ImageRepository(ApplicationDbContext dbContext)
     /// Retrieves an image by its unique hash value.
     /// </summary>
     /// <param name="hash">The hash to search for.</param>
-    /// <returns>The matching <see cref="Image"/> or <c>null</c> if none found.</returns>
-    public async Task<Image?> GetByHashAsync(ulong hash)
+    /// <returns>The matching <see cref="Image"/> as an Option.</returns>
+    public async Task<Option<Image>> GetByHashAsync(ulong hash)
     {
-        return await DbContext.Images.Include(i => i.UserOwnedImages).FirstOrDefaultAsync(i => i.Hash == hash);
+        var image = await DbContext.Images.Include(i => i.UserOwnedImages).FirstOrDefaultAsync(i => i.Hash == hash);
+        return image == null ? Option<Image>.None() : Option<Image>.Some(image);
     }
 
     /// <summary>
     /// Retrieves an image by its ID, including related tags and characters.
     /// </summary>
-    /// <param name="id">The image’s GUID.</param>
-    /// <returns>The matching <see cref="Image"/> or <c>null</c> if none found.</returns>
-    public async Task<Image?> GetByIdFullAsync(Guid id)
+    /// <param name="id">The image's GUID.</param>
+    /// <returns>The matching <see cref="Image"/> as an Option.</returns>
+    public async Task<Option<Image>> GetByIdFullAsync(Guid id)
     {
-        return await DbContext.Images
+        var image = await DbContext.Images
             .Include(i => i.Tags)
             .Include(i => i.Characters)
             .Include(i => i.UserOwnedImages)
             .FirstOrDefaultAsync(i => i.Id == id);
+        return image == null ? Option<Image>.None() : Option<Image>.Some(image);
     }
     #endregion
 }

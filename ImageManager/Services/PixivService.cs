@@ -1,9 +1,13 @@
 ﻿#region Usings
 
+using ImageManager.Data.Helpers;
 using PixivCS.Api;
 using PixivCS.Models.Common;
 using PixivCS.Models.Illust;
 using PixivCS.Network;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 #endregion
 
 namespace ImageManager.Services;
@@ -21,15 +25,15 @@ public interface IPixivService
     /// <param name="userId">Pixiv user identifier.</param>
     /// <param name="refreshToken">Refresh token for the user (optional).</param>
     /// <param name="checkPrivate"><c>true</c> to include private bookmarks.</param>
-    /// <returns>An array of <see cref="IllustInfo"/> objects.</returns>
-    Task<IllustInfo[]> GetLikedBookmarks(string userId, string? refreshToken, bool checkPrivate);
+    /// <returns>A Result containing an array of <see cref="IllustInfo"/> objects or an error.</returns>
+    Task<Result<IllustInfo[], PixivError>> GetLikedBookmarks(string userId, string? refreshToken, bool checkPrivate);
 
     /// <summary>
     /// Downloads the image data for a given illustration.
     /// </summary>
     /// <param name="illustration">Illustration metadata.</param>
-    /// <returns>Byte array containing the image.</returns>
-    Task<byte[]> DownloadImage(IllustInfo illustration);
+    /// <returns>A Result containing a byte array with the image data or an error.</returns>
+    Task<Result<byte[], PixivError>> DownloadImage(IllustInfo illustration);
 }
 
 #region Implementation
@@ -66,70 +70,219 @@ public sealed class PixivService : IPixivService
     /// <summary>
     /// Authenticates the service using the download refresh token.
     /// </summary>
-    /// <exception cref="PixivAuthException">Thrown when authentication fails.</exception>
-    private async Task AuthenticateAsync()
+    private async Task<Result<Unit, PixivError>> AuthenticateAsync()
     {
-        var result = await _api.AuthAsync(_downloadRefreshToken);
-        if (result.HasError)
-            throw new PixivAuthException($"Pixiv authentication failed: {result.Error}");
+        try
+        {
+            var result = await _api.AuthAsync(_downloadRefreshToken);
+            if (result.HasError)
+                return Result<Unit, PixivError>.Err(PixivError.AuthenticationFailed);
 
-        _nextRefresh = result.ExpiresAt;
+            _nextRefresh = result.ExpiresAt;
+            return Result<Unit, PixivError>.Ok(Unit.New());
+        }
+        catch (TaskCanceledException)
+        {
+            return Result<Unit, PixivError>.Err(PixivError.Timeout);
+        }
+        catch (TimeoutException)
+        {
+            return Result<Unit, PixivError>.Err(PixivError.Timeout);
+        }
+        catch (HttpRequestException)
+        {
+            return Result<Unit, PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (SocketException)
+        {
+            return Result<Unit, PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (WebException)
+        {
+            return Result<Unit, PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (PixivAuthException)
+        {
+            return Result<Unit, PixivError>.Err(PixivError.AuthenticationFailed);
+        }
+        catch (PixivRateLimitException)
+        {
+            return Result<Unit, PixivError>.Err(PixivError.RateLimited);
+        }
+        catch (Exception)
+        {
+            return Result<Unit, PixivError>.Err(PixivError.ApiError);
+        }
     }
 
     /// <summary>
     /// Ensures that the service is authenticated before making API calls.
     /// </summary>
-    private async Task EnsureAuthenticatedAsync()
+    private async Task<Result<Unit, PixivError>> EnsureAuthenticatedAsync()
     {
         if (DateTime.UtcNow > _nextRefresh)
-            await AuthenticateAsync();
+        {
+            var authResult = await AuthenticateAsync();
+            if (!authResult.IsOk)
+                return authResult;
+        }
+        return Result<Unit, PixivError>.Ok(Unit.New());
     }
 
-    public async Task<IllustInfo[]> GetLikedBookmarks(string userId, string? refreshToken, bool checkPrivate)
+    public async Task<Result<IllustInfo[], PixivError>> GetLikedBookmarks(string userId, string? refreshToken, bool checkPrivate)
     {
         if (string.IsNullOrWhiteSpace(userId))
-            throw new ArgumentException("User ID cannot be null or empty.", nameof(userId));
+            return Result<IllustInfo[], PixivError>.Err(PixivError.InvalidInput);
 
-        await EnsureAuthenticatedAsync();
+        try
+        {
+            var authResult = await EnsureAuthenticatedAsync();
+            if (!authResult.IsOk)
+                return Result<IllustInfo[], PixivError>.Err(authResult.UnwrapError());
 
-        var publicResult = await _api.GetUserBookmarksIllustAsync(userId);
-        if (publicResult.HasError)
-            throw new PixivApiException($"Error fetching public bookmarks for user {userId}");
+            var publicResult = await _api.GetUserBookmarksIllustAsync(userId);
+            if (publicResult.HasError)
+            {
+                // Check if it's a rate limit error
+                var errorMessage = publicResult.Error?.ToString() ?? "";
+                if (errorMessage.Contains("rate", StringComparison.OrdinalIgnoreCase) ||
+                    errorMessage.Contains("limit", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Result<IllustInfo[], PixivError>.Err(PixivError.RateLimited);
+                }
+                return Result<IllustInfo[], PixivError>.Err(PixivError.ApiError);
+            }
 
-        // If private bookmarks are not requested, return the public list immediately.
-        if (!checkPrivate || string.IsNullOrWhiteSpace(refreshToken))
-            return publicResult.Illusts?.ToArray() ?? [];
+            // If private bookmarks are not requested, return the public list immediately.
+            if (!checkPrivate || string.IsNullOrWhiteSpace(refreshToken))
+                return Result<IllustInfo[], PixivError>.Ok(publicResult.Illusts?.ToArray() ?? []);
 
-        var userApi = new PixivAppApi();
-        var authResult = await userApi.AuthAsync(refreshToken);
-        if (authResult.HasError)
-            throw new PixivAuthException($"Pixiv authentication failed: {authResult.Error}");
+            var userApi = new PixivAppApi();
+            var userAuthResult = await userApi.AuthAsync(refreshToken);
+            if (userAuthResult.HasError)
+                return Result<IllustInfo[], PixivError>.Err(PixivError.AuthenticationFailed);
 
-        var privateResult = await userApi.GetUserBookmarksIllustAsync(userId, RestrictType.Private);
-        if (privateResult.HasError)
-            throw new PixivApiException($"Error fetching private bookmarks for user {userId}");
+            var privateResult = await userApi.GetUserBookmarksIllustAsync(userId, RestrictType.Private);
+            if (privateResult.HasError)
+            {
+                // Check if it's a rate limit error
+                var errorMessage = privateResult.Error?.ToString() ?? "";
+                if (errorMessage.Contains("rate", StringComparison.OrdinalIgnoreCase) ||
+                    errorMessage.Contains("limit", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Result<IllustInfo[], PixivError>.Err(PixivError.RateLimited);
+                }
+                return Result<IllustInfo[], PixivError>.Err(PixivError.ApiError);
+            }
 
-        publicResult.Illusts?.AddRange(privateResult.Illusts ?? []);
-        return publicResult.Illusts?.ToArray() ?? [];
+            publicResult.Illusts?.AddRange(privateResult.Illusts ?? []);
+            return Result<IllustInfo[], PixivError>.Ok(publicResult.Illusts?.ToArray() ?? []);
+        }
+        catch (TaskCanceledException)
+        {
+            return Result<IllustInfo[], PixivError>.Err(PixivError.Timeout);
+        }
+        catch (TimeoutException)
+        {
+            return Result<IllustInfo[], PixivError>.Err(PixivError.Timeout);
+        }
+        catch (HttpRequestException)
+        {
+            return Result<IllustInfo[], PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (SocketException)
+        {
+            return Result<IllustInfo[], PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (WebException)
+        {
+            return Result<IllustInfo[], PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (PixivAuthException)
+        {
+            return Result<IllustInfo[], PixivError>.Err(PixivError.AuthenticationFailed);
+        }
+        catch (PixivRateLimitException)
+        {
+            return Result<IllustInfo[], PixivError>.Err(PixivError.RateLimited);
+        }
+        catch (PixivApiException)
+        {
+            return Result<IllustInfo[], PixivError>.Err(PixivError.ApiError);
+        }
+        catch (Exception)
+        {
+            return Result<IllustInfo[], PixivError>.Err(PixivError.ApiError);
+        }
     }
 
-    public async Task<byte[]> DownloadImage(IllustInfo illustration)
+    public async Task<Result<byte[], PixivError>> DownloadImage(IllustInfo illustration)
     {
         if (illustration == null)
-            throw new ArgumentNullException(nameof(illustration));
+            return Result<byte[], PixivError>.Err(PixivError.InvalidInput);
 
-        await EnsureAuthenticatedAsync();
+        try
+        {
+            var authResult = await EnsureAuthenticatedAsync();
+            if (!authResult.IsOk)
+                return Result<byte[], PixivError>.Err(authResult.UnwrapError());
 
-        var imageUrls = illustration.ImageUrls;
-        if (imageUrls == null && illustration?.MetaSinglePage?.OriginalImageUrl == null)
-            throw new ArgumentNullException(nameof(imageUrls), "Illustration does not contain any image URLs.");
+            var imageUrls = illustration.ImageUrls;
+            if (imageUrls == null && illustration?.MetaSinglePage?.OriginalImageUrl == null)
+                return Result<byte[], PixivError>.Err(PixivError.InvalidInput);
 
-        // Prefer the original URL, fall back to large.
-        var url = illustration.MetaPages.FirstOrDefault()?.ImageUrls?.Original ?? illustration.MetaPages.FirstOrDefault()?.ImageUrls?.Large ?? illustration?.MetaSinglePage?.OriginalImageUrl ?? imageUrls!.Original ?? imageUrls.Large;
-        if (string.IsNullOrWhiteSpace(url))
-            throw new InvalidOperationException("No valid image URL available for download.");
+            // Prefer the original URL, fall back to large.
+            var url = illustration.MetaPages.FirstOrDefault()?.ImageUrls?.Original ?? 
+                      illustration.MetaPages.FirstOrDefault()?.ImageUrls?.Large ?? 
+                      illustration?.MetaSinglePage?.OriginalImageUrl ?? 
+                      imageUrls!.Original ?? 
+                      imageUrls.Large;
+            
+            if (string.IsNullOrWhiteSpace(url))
+                return Result<byte[], PixivError>.Err(PixivError.InvalidInput);
 
-        return await _api.DownloadImageAsync(url);
+            var imageData = await _api.DownloadImageAsync(url);
+            if (imageData == null || imageData.Length == 0)
+                return Result<byte[], PixivError>.Err(PixivError.DownloadFailed);
+
+            return Result<byte[], PixivError>.Ok(imageData);
+        }
+        catch (TaskCanceledException)
+        {
+            return Result<byte[], PixivError>.Err(PixivError.Timeout);
+        }
+        catch (TimeoutException)
+        {
+            return Result<byte[], PixivError>.Err(PixivError.Timeout);
+        }
+        catch (HttpRequestException)
+        {
+            return Result<byte[], PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (SocketException)
+        {
+            return Result<byte[], PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (WebException)
+        {
+            return Result<byte[], PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (PixivAuthException)
+        {
+            return Result<byte[], PixivError>.Err(PixivError.AuthenticationFailed);
+        }
+        catch (PixivRateLimitException)
+        {
+            return Result<byte[], PixivError>.Err(PixivError.RateLimited);
+        }
+        catch (PixivApiException)
+        {
+            return Result<byte[], PixivError>.Err(PixivError.ApiError);
+        }
+        catch (Exception)
+        {
+            return Result<byte[], PixivError>.Err(PixivError.DownloadFailed);
+        }
     }
 }
 
