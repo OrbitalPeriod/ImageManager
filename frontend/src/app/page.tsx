@@ -1,65 +1,192 @@
-import Image from "next/image";
+/**
+ * Homepage
+ * Based on the example Index design, adapted for Next.js and API integration
+ */
+
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { getClientApiClient } from '@/lib/api/client-client';
+import { handleApiResponseError, handleError, getErrorMessage } from '@/lib/errors/handlers';
+import { useDebounce } from '@/lib/hooks/useDebounce';
+import { TopNavbar } from '@/components/layout/TopNavbar';
+import { SearchSection, type AgeRating } from '@/components/images/SearchSection';
+import { ImageGallery, type ImageData } from '@/components/images/ImageGallery';
+import { PaginationControls } from '@/components/images/PaginationControls';
+import { ErrorPopup } from '@/components/ui/ErrorPopup';
+
+interface SearchImagesResponse {
+  data?: ImageData[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
 
 export default function Home() {
+  // Search state
+  const [characterSearch, setCharacterSearch] = useState('');
+  const [tagSearch, setTagSearch] = useState('');
+  const debouncedCharacterSearch = useDebounce(characterSearch, 400);
+  const debouncedTagSearch = useDebounce(tagSearch, 400);
+
+  // Filter state
+  const [selectedRatings, setSelectedRatings] = useState<AgeRating[]>([]);
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(24);
+
+  // Data state
+  const [images, setImages] = useState<ImageData[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get API base URL from environment
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+
+  // Parse search strings into arrays (split by comma)
+  const parseSearchTerms = (searchString: string): string[] => {
+    return searchString
+      .split(',')
+      .map((term) => term.trim())
+      .filter((term) => term.length > 0);
+  };
+
+  // Fetch images from API
+  const fetchImages = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const client = getClientApiClient();
+
+      // Prepare query parameters
+      const characters = parseSearchTerms(debouncedCharacterSearch);
+      const tags = parseSearchTerms(debouncedTagSearch);
+      const ratings = selectedRatings.length > 0 ? selectedRatings : undefined;
+
+      // Build query params
+      const queryParams: {
+        page: number;
+        pageSize: number;
+        Characters?: string[];
+        Tags?: string[];
+        Rating?: AgeRating[];
+      } = {
+        page,
+        pageSize,
+      };
+
+      if (characters.length > 0) {
+        queryParams.Characters = characters;
+      }
+      if (tags.length > 0) {
+        queryParams.Tags = tags;
+      }
+      if (ratings && ratings.length > 0) {
+        queryParams.Rating = ratings;
+      }
+
+      const response = await client.GET('/api/images/search', {
+        params: {
+          query: queryParams,
+        },
+      });
+
+      if (response.error) {
+        const appError = handleApiResponseError(response);
+        setError(getErrorMessage(appError));
+        setImages([]);
+        setTotalPages(1);
+        return;
+      }
+
+      const data = response.data as SearchImagesResponse | undefined;
+      if (data) {
+        setImages(data.data || []);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        setImages([]);
+        setTotalPages(1);
+      }
+    } catch (err) {
+      const appError = handleError(err);
+      setError(getErrorMessage(appError));
+      setImages([]);
+      setTotalPages(1);
+    } finally {
+      setLoading(false);
+    }
+  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize]);
+
+  // Fetch images when dependencies change
+  useEffect(() => {
+    fetchImages();
+  }, [fetchImages]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    if (page !== 1) {
+      setPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings]);
+
+  // Handle rating toggle
+  const handleRatingChange = (rating: AgeRating) => {
+    setSelectedRatings((prev) => {
+      if (prev.includes(rating)) {
+        return prev.filter((r) => r !== rating);
+      } else {
+        return [...prev, rating];
+      }
+    });
+  };
+
+  // Handle page size change
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setPage(1); // Reset to first page
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="min-h-screen bg-background">
+      <TopNavbar />
+      <main>
+        <SearchSection
+          characterSearch={characterSearch}
+          tagSearch={tagSearch}
+          selectedRatings={selectedRatings}
+          onCharacterSearchChange={setCharacterSearch}
+          onTagSearchChange={setTagSearch}
+          onRatingChange={handleRatingChange}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="text-foreground text-lg">Loading images...</div>
+          </div>
+        ) : (
+          <>
+            <ImageGallery images={images} apiBaseUrl={apiBaseUrl} />
+            <PaginationControls
+              currentPage={page}
+              totalPages={totalPages}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          </>
+        )}
       </main>
+
+      {error && (
+        <ErrorPopup
+          message={error}
+          onClose={() => setError(null)}
+        />
+      )}
     </div>
   );
 }
