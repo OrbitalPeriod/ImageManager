@@ -15,6 +15,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Verify files are copied correctly (debug step)
+RUN ls -la src/lib/api/ || echo "src/lib/api not found"
+
 # Set build-time environment variable
 # Note: NEXT_PUBLIC_ variables are embedded at build time in Next.js
 ARG NEXT_PUBLIC_API_URL
