@@ -5,8 +5,11 @@
 
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { cn } from '@/lib/utils/cn';
+import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
+import { getClientApiClient } from '@/lib/api/client-client';
+import type { AutocompleteSuggestion } from '@/lib/hooks/useAutocomplete';
 
 export type AgeRating = 0 | 1 | 2 | 3; // General, Sensitive, Questionable, Explicit
 
@@ -48,44 +51,92 @@ export function SearchSection({
 }: SearchSectionProps) {
   const isRatingSelected = (rating: AgeRating) => selectedRatings.includes(rating);
 
+  // Fetch character suggestions
+  const fetchCharacterSuggestions = useCallback(async (query: string): Promise<AutocompleteSuggestion[]> => {
+    try {
+      const client = getClientApiClient();
+      const response = await client.GET('/api/characters/search', {
+        params: {
+          query: {
+            q: query,
+            page: 1,
+            pageSize: 10,
+          },
+        },
+      });
+
+      if (response.error || !response.data) {
+        return [];
+      }
+
+      const characters = response.data.data || [];
+      return characters
+        .filter((char) => char.characterName)
+        .map((char) => ({
+          id: char.tagId || char.characterName || '',
+          label: char.characterName || '',
+        }));
+    } catch (error) {
+      console.error('Error fetching character suggestions:', error);
+      return [];
+    }
+  }, []);
+
+  // Fetch tag suggestions
+  const fetchTagSuggestions = useCallback(async (query: string): Promise<AutocompleteSuggestion[]> => {
+    try {
+      const client = getClientApiClient();
+      const response = await client.GET('/api/tags/search', {
+        params: {
+          query: {
+            q: query,
+            page: 1,
+            pageSize: 10,
+          },
+        },
+      });
+
+      if (response.error || !response.data) {
+        return [];
+      }
+
+      const tags = response.data.data || [];
+      return tags
+        .filter((tag) => tag.tagName)
+        .map((tag) => ({
+          id: tag.tagId || tag.tagName || '',
+          label: tag.tagName || '',
+        }));
+    } catch (error) {
+      console.error('Error fetching tag suggestions:', error);
+      return [];
+    }
+  }, []);
+
   return (
     <section className="w-full py-8">
       <div className="container mx-auto px-4 space-y-6">
         {/* Search Bars */}
         <div className="grid md:grid-cols-2 gap-4">
           {/* Character Search */}
-          <div className="relative group">
-            <div className="absolute inset-0 bg-primary/10 rounded-lg blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative glass rounded-lg p-1 group-focus-within:ring-2 group-focus-within:ring-primary/50 transition-all">
-              <div className="flex items-center gap-3 px-4 py-3">
-                <UsersIcon className="text-primary shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Search characters..."
-                  value={characterSearch}
-                  onChange={(e) => onCharacterSearchChange(e.target.value)}
-                  className="flex-1 border-0 bg-transparent p-0 h-auto text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0"
-                />
-              </div>
-            </div>
-          </div>
+          <AutocompleteInput
+            value={characterSearch}
+            onChange={onCharacterSearchChange}
+            onFetchSuggestions={fetchCharacterSuggestions}
+            placeholder="Search characters..."
+            icon={<UsersIcon />}
+            minChars={2}
+          />
 
           {/* Tag Search */}
-          <div className="relative group">
-            <div className="absolute inset-0 bg-primary/10 rounded-lg blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            <div className="relative glass rounded-lg p-1 group-focus-within:ring-2 group-focus-within:ring-primary/50 transition-all">
-              <div className="flex items-center gap-3 px-4 py-3">
-                <TagsIcon className="text-primary shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Search tags..."
-                  value={tagSearch}
-                  onChange={(e) => onTagSearchChange(e.target.value)}
-                  className="flex-1 border-0 bg-transparent p-0 h-auto text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0"
-                />
-              </div>
-            </div>
-          </div>
+          <AutocompleteInput
+            value={tagSearch}
+            onChange={onTagSearchChange}
+            onFetchSuggestions={fetchTagSuggestions}
+            placeholder="Search tags..."
+            icon={<TagsIcon />}
+            minChars={2}
+          />
         </div>
 
         {/* Age Rating Selector */}
