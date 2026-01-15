@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 
 using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
@@ -29,24 +29,40 @@ public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : IT
 
         var baseQuery = userOwnedImageRepository.AccessibleImages(user, token);
 
-        var totalCount = await baseQuery.CountAsync();
-        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
-
-        var tags = await baseQuery
+        // First, get the grouped tag data
+        var groupedTags = await baseQuery
             .SelectMany(uoi => uoi.Image.Tags)
             .GroupBy(t => new { t.Id, t.Name })
+            .Select(g => new
+            {
+                Id = g.Key.Id,
+                Name = g.Key.Name,
+                Count = g.Count()
+            })
+            .ToListAsync();
+
+        // Then group by name only to merge duplicates (similar to characters fix)
+        var mergedTags = groupedTags
+            .GroupBy(t => t.Name)
             .Select(g => new TagCountDto(
-                g.Key.Id,
-                g.Key.Name,
-                g.Count()))
+                g.OrderBy(t => t.Id).First().Id,
+                g.Key,
+                g.Sum(t => t.Count)))
             .OrderByDescending(x => x.Count)
+            .ToList();
+
+        // Total count for paging metadata (count unique tags by name)
+        var totalCount = mergedTags.Count;
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        var tags = mergedTags
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToArray();
 
         return Result<PaginatedResponse<TagCountDto>, TagError>.Ok(new PaginatedResponse<TagCountDto>
         {
-            Data = tags.ToArray(),
+            Data = tags,
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,
@@ -75,25 +91,38 @@ public class TagService(IUserOwnedImageRepository userOwnedImageRepository) : IT
             tagsQuery = tagsQuery.Where(t => EF.Functions.Like(t.Name.ToLower(), pattern));
         }
 
-        var grouped = tagsQuery
+        // First, get the grouped tag data
+        var groupedTags = await tagsQuery
             .GroupBy(t => new { t.Id, t.Name })
-            .Select(g => new TagCountDto(
-                g.Key.Id,
-                g.Key.Name,
-                g.Count()));
+            .Select(g => new
+            {
+                Id = g.Key.Id,
+                Name = g.Key.Name,
+                Count = g.Count()
+            })
+            .ToListAsync();
 
-        var totalCount = await grouped.CountAsync();
+        // Then group by name only to merge duplicates (similar to characters fix)
+        var mergedTags = groupedTags
+            .GroupBy(t => t.Name)
+            .Select(g => new TagCountDto(
+                g.OrderBy(t => t.Id).First().Id,
+                g.Key,
+                g.Sum(t => t.Count)))
+            .OrderByDescending(x => x.Count)
+            .ToList();
+
+        var totalCount = mergedTags.Count;
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-        var tags = await grouped
-            .OrderByDescending(x => x.Count)
+        var tags = mergedTags
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToArray();
 
         return Result<PaginatedResponse<TagCountDto>, TagError>.Ok(new PaginatedResponse<TagCountDto>
         {
-            Data = tags.ToArray(),
+            Data = tags,
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,
