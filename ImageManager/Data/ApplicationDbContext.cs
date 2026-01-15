@@ -1,4 +1,4 @@
-﻿using ImageManager.Data.Models;
+using ImageManager.Data.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +24,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         builder.Entity<Image>().HasMany(e => e.Tags).WithMany(e => e.Image);
         builder.Entity<Image>().HasMany(e => e.Characters).WithMany(e => e.Images);
-        builder.Entity<Image>().HasOne(i => i.DownloadedImage).WithOne(di => di.Image).IsRequired(false).HasForeignKey<DownloadedImage>(di => di.ImageId).IsRequired(false);
+        builder.Entity<Image>().HasOne(i => i.DownloadedImage).WithMany(di => di.Images).IsRequired(false).HasForeignKey(i => i.DownloadedImageId).IsRequired(false);
         builder.Entity<UserOwnedImage>().HasMany(e => e.ShareTokens).WithOne(e => e.UserOwnedImage).HasForeignKey(st => st.UserOwnedImageId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<User>().HasMany(e => e.Images).WithOne(e => e.User);
         builder.Entity<User>().HasMany(e => e.ShareTokens).WithOne(e => e.User).HasForeignKey(st => st.UserId).OnDelete(DeleteBehavior.Cascade);
@@ -45,7 +45,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<UserOwnedImage>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Entity<UserOwnedImage>().HasKey(i => i.Id);
 
-        builder.Entity<Image>().HasOne(i => i.DownloadedImage).WithOne(i => i.Image).IsRequired(false)
-            .OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<Image>().HasOne(i => i.DownloadedImage).WithMany(di => di.Images).IsRequired(false)
+            .HasForeignKey(i => i.DownloadedImageId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

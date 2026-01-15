@@ -61,9 +61,6 @@ namespace ImageManager.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
-                    b.Property<Guid>("ImageId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("Platform")
                         .HasColumnType("integer");
 
@@ -74,9 +71,6 @@ namespace ImageManager.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ImageId")
-                        .IsUnique();
 
                     b.HasIndex("UserId");
 
@@ -93,6 +87,9 @@ namespace ImageManager.Migrations
                     b.Property<int>("AgeRating")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("DownloadedImageId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("HasCompressedVersion")
                         .HasColumnType("boolean");
 
@@ -103,6 +100,8 @@ namespace ImageManager.Migrations
                         .HasColumnType("numeric(20,0)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DownloadedImageId");
 
                     b.ToTable("Images", "identity");
                 });
@@ -470,16 +469,19 @@ namespace ImageManager.Migrations
 
             modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
                 {
-                    b.HasOne("ImageManager.Data.Models.Image", "Image")
-                        .WithOne("DownloadedImage")
-                        .HasForeignKey("ImageManager.Data.Models.DownloadedImage", "ImageId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.HasOne("ImageManager.Data.Models.User", null)
                         .WithMany("DownloadedImages")
                         .HasForeignKey("UserId");
+                });
 
-                    b.Navigation("Image");
+            modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
+                {
+                    b.HasOne("ImageManager.Data.Models.DownloadedImage", "DownloadedImage")
+                        .WithMany("Images")
+                        .HasForeignKey("DownloadedImageId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("DownloadedImage");
                 });
 
             modelBuilder.Entity("ImageManager.Data.Models.PlatformSyncLog", b =>
@@ -608,10 +610,13 @@ namespace ImageManager.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ImageManager.Data.Models.DownloadedImage", b =>
+                {
+                    b.Navigation("Images");
+                });
+
             modelBuilder.Entity("ImageManager.Data.Models.Image", b =>
                 {
-                    b.Navigation("DownloadedImage");
-
                     b.Navigation("UserOwnedImages");
                 });
 

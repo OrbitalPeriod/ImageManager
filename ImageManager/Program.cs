@@ -1,12 +1,18 @@
-﻿#region Usings
+#region Usings
 
 using System.Threading.Channels;
 using ImageManager.Data;
 using ImageManager.Extensions;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Implementations;
+using ImageManager.Repositories.Repository_Interfaces;
 using ImageManager.Services;
+using ImageManager.Services.Character;
+using ImageManager.Services.File;
+using ImageManager.Services.ImageImport;
 using ImageManager.Services.PlatformTokens;
 using ImageManager.Services.Query;
+using ImageManager.Services.ShareToken;
 using ImageManager.Services.Tags;
 using ImageManager.Services.UserInfo;
 using ImageManager.Workers;
@@ -85,6 +91,7 @@ builder.Services.AddScoped<IUploadImageService, UploadImageService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<ICharacterQueryService, CharacterQueryService>();
 builder.Services.AddScoped<IInitialUserCreationService, InitialUserCreationService>();
+builder.Services.AddScoped<IShareTokenService, ShareTokenService>();
 
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IUserInfoService, UserInfoService>();
@@ -136,6 +143,14 @@ builder.Services.AddSwaggerGen(c =>
         Description = "Backend to manage and access images",
         Version = "v1"
     });
+    
+    // Include XML comments for better documentation
+    var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
 });
 
 builder.Services.AddControllers();

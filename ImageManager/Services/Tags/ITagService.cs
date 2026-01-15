@@ -1,7 +1,6 @@
-﻿#region Usings
+﻿using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
-#endregion
 
 namespace ImageManager.Services.Tags;
 
@@ -34,7 +33,7 @@ public interface ITagService
     /// </param>
     /// <param name="page">1‑based page number (default 1).</param>
     /// <param name="pageSize">Number of items per page (default 20).</param>
-    Task<PaginatedResponse<TagCountDto>> GetTagsAsync(
+    Task<Result<PaginatedResponse<TagCountDto>, TagError>> GetTagsAsync(
         User? user,
         Guid? token,
         int page,
@@ -51,7 +50,7 @@ public interface ITagService
     /// </param>
     /// <param name="page">1‑based page number.</param>
     /// <param name="pageSize">Number of items per page.</param>
-    Task<PaginatedResponse<TagCountDto>> SearchTagsAsync(
+    Task<Result<PaginatedResponse<TagCountDto>, TagError>> SearchTagsAsync(
         User? user,
         string q,
         Guid? token,

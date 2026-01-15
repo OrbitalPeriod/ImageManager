@@ -1,6 +1,8 @@
 ﻿using System.Threading.Channels;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Repository_Interfaces;
 using ImageManager.Services;
 
 namespace ImageManager.Workers;
@@ -34,19 +36,21 @@ public class RemoteSyncService(
             var logRepo = scope.ServiceProvider.GetRequiredService<IPlatformSyncLogRepository>();
             var transactionRepo = scope.ServiceProvider.GetRequiredService<ITransactionService>();
 
-            PlatformToken? platformToken = null;
+            Option<PlatformToken> platformTokenOption = Option<PlatformToken>.None();
             try
             {
                 logger.LogInformation(
                     "Processing sync for token {Token}",
                     request.PlatformTokenId);
 
-                platformToken = await repo.GetByIdAsync(request.PlatformTokenId);
-                if (platformToken == null)
+                platformTokenOption = await repo.GetByIdAsync(request.PlatformTokenId);
+                if (platformTokenOption.IsNone)
                 {
                     logger.LogWarning("Token not found: {Token}", request.PlatformTokenId);
                     continue;
                 }
+
+                var platformToken = platformTokenOption.Unwrap();
 
                 switch (platformToken.Platform)
                 {
@@ -67,19 +71,24 @@ public class RemoteSyncService(
                     PlatformTokenId = platformToken.Id,
                     Success = true,
                 });
+                await transactionRepo.SaveChangesAsync(stoppingToken);
             }
             catch (Exception ex) when (!(ex is OperationCanceledException))
             {
                 logger.LogError(ex, "Error while syncing token {Token}", request.PlatformTokenId);
 
-                if (platformToken != null) await logRepo.AddAsync(new PlatformSyncLog()
+                if (platformTokenOption.IsSome)
                 {
-                    Message =
-                            $"Error while syncing token {request.PlatformTokenId} at {DateTime.UtcNow} due to error: {ex.Message}",
-                    PlatformTokenId = platformToken.Id,
-                    Success = false,
-                });
-                await transactionRepo.SaveChangesAsync(stoppingToken);
+                    var platformToken = platformTokenOption.Unwrap();
+                    await logRepo.AddAsync(new PlatformSyncLog()
+                    {
+                        Message =
+                                $"Error while syncing token {request.PlatformTokenId} at {DateTime.UtcNow} due to error: {ex.Message}",
+                        PlatformTokenId = platformToken.Id,
+                        Success = false,
+                    });
+                    await transactionRepo.SaveChangesAsync(stoppingToken);
+                }
             }
         }
         logger.LogInformation("Remote sync worker stopped.");

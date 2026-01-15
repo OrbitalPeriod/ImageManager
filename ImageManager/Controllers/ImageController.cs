@@ -1,8 +1,11 @@
-﻿#region Usings
+#region Usings
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
+using ImageManager.Extensions;
 using ImageManager.Services;
+using ImageManager.Services.File;
+using ImageManager.Services.ImageImport;
 using ImageManager.Services.Query;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -60,6 +63,8 @@ public class ImageController(
     /// If no authentication is required, this endpoint remains open to anonymous users.
     /// </summary>
     [HttpGet]
+    [ProducesResponseType(typeof(PaginatedResponse<GetImagesResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PaginatedResponse<GetImagesResponse>>> GetImages(
         [FromQuery] Guid? token,
         [FromQuery, Range(1, int.MaxValue)] int page = 1,
@@ -68,30 +73,31 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageQueryService.GetImagesAsync(user, token, page, pageSize);
-        return Ok(result);
+        return this.ToActionResult(result);
     }
 
     /// <summary>
     /// Uploads a new image and returns its GUID.  
     /// Requires the caller to be authenticated.
     /// </summary>
-    [HttpPut("upload")]
+    [HttpPut()]
     [Authorize]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> Upload([FromForm] UploadImageRequest request)
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<Guid>> Upload([FromForm] UploadImageRequest request)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
         if (user == null) return Unauthorized();
 
-        var imageId = await uploadImageService.UploadAsync(
+        var uploadResult = await uploadImageService.UploadAsync(
             request.File,
             request.Publicity ?? user.DefaultPublicity,
             user);
 
-        if (imageId == null)
-            return BadRequest("Failed to import image");
-
-        return Ok(imageId);
+        return this.ToActionResult(uploadResult.Map(success => success.Id));
     }
 
     /// <summary>
@@ -100,40 +106,33 @@ public class ImageController(
     /// </summary>
     [HttpDelete("{imageId:guid}")]
     [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid imageId)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
         if (user == null) return Unauthorized();
 
         var result = await deleteImageService.DeleteAsync(imageId, user.Id);
-
-        return result switch
-        {
-            DeleteResult.NotFound => NotFound(),
-            DeleteResult.Forbidden => Forbid(),
-            DeleteResult.Deleted => Ok(),
-            _ => BadRequest()
-        };
+        return this.ToActionResult(result);
     }
 
     /// <summary>
     /// Retrieves public metadata for an image (tags, characters, rating, owners).  
-    /// Access is validated against the supplied token.
+    /// Access is validated against the supplied token.q
     /// </summary>
     [HttpGet("{imageId:guid}/data")]
+    [ProducesResponseType(typeof(ImageDataResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ImageDataResponse>> Data(Guid imageId, [FromQuery] Guid? token)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageDataAccessAsync(imageId, user, token);
-        if (!result.Found) return NotFound();
-        if (!result.Allowed) return Forbid();
-
-        var data = result.Data;
-        if (data == null)
-            return NotFound("Image data not found.");
-
-        return Ok(data);
+        return this.ToActionResult(result);
     }
 
     /// <summary>
@@ -141,18 +140,21 @@ public class ImageController(
     /// The MIME type is now inferred from the image record or by inspecting the file header.
     /// </summary>
     [HttpGet("{imageId:guid}")]
+    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetImage(Guid imageId, [FromQuery] Guid? token)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
-        if (!result.Found) return NotFound();
-        if (!result.Allowed) return Forbid();
+        if (!result.IsOk)
+        {
+            return this.ToActionResultForError(result);
+        }
 
-        var image = result.Image;
-        if (image == null)
-            return NotFound("Requested image not found.");
-
+        var image = result.Unwrap();
         // Return the image file
         return await ReturnCompressed(image);
     }
@@ -163,35 +165,44 @@ public class ImageController(
     /// The MIME type is now inferred from the image record or by inspecting the file header.
     /// </summary>
     [HttpGet("{imageId:guid}/original")]
+    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetOriginalImage(Guid imageId, [FromQuery] Guid? token)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
-        if (!result.Found) return NotFound();
-        if (!result.Allowed) return Forbid();
+        if (!result.IsOk)
+        {
+            return this.ToActionResultForError(result);
+        }
 
-        var image = result.Image;
-        if (image == null)
-            return NotFound("Requested image not found.");
-
+        var image = result.Unwrap();
         // Return the image file
         return await ReturnImage(image);
     }
 
+    /// <summary>
+    /// Streams the thumbnail image file to the caller.
+    /// </summary>
     [HttpGet("{imageId:guid}/thumb")]
+    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetThumbImage(Guid imageId, [FromQuery] Guid? token)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageDetailService.GetImageAccessAsync(imageId, user, token);
-        if (!result.Found) return NotFound();
-        if (!result.Allowed) return Forbid();
+        if (!result.IsOk)
+        {
+            return this.ToActionResultForError(result);
+        }
 
-        var image = result.Image;
-        if (image == null)
-            return NotFound("Requested image not found.");
-
+        var image = result.Unwrap();
         // Return the image file
         return await ReturnThumbnail(image);
     }
@@ -201,6 +212,8 @@ public class ImageController(
     /// Returns a paginated result set.
     /// </summary>
     [HttpGet("search")]
+    [ProducesResponseType(typeof(PaginatedResponse<GetSearchImagesResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PaginatedResponse<GetSearchImagesResponse>>> Search(
         [FromQuery] GetSearchImagesRequest request,
         [FromQuery, Range(1, int.MaxValue)] int page = 1,
@@ -209,7 +222,7 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await imageQueryService.SearchImagesAsync(user, request, page, pageSize);
-        return Ok(result);
+        return this.ToActionResult(result);
     }
     #endregion
 

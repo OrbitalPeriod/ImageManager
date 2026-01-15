@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using ImageManager.Repositories;
 
 namespace ImageManager.Data.Models;
@@ -15,6 +15,7 @@ public class Image : IEntity<Guid>
     public ICollection<Tag> Tags { get; set; } = [];
     public ICollection<Character> Characters { get; init; } = [];
 
+    public Guid? DownloadedImageId { get; set; }
     public DownloadedImage? DownloadedImage { get; private set; }
 
     public required bool HasThumbnail { get; set; } = false;

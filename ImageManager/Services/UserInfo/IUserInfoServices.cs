@@ -1,10 +1,28 @@
-﻿#region Usings
+﻿using System.Security.Claims;
+using ImageManager.Data.Helpers;
+using ImageManager.Data.Models;
 
-using System.Security.Claims;
+namespace ImageManager.Services.UserInfo;
+
+#region DTOs
+
+/// <summary>
+/// DTO returned by the user‑info service.
+/// It contains the authenticated user’s basic profile data and the default publicity level
+/// used when that user uploads a new image.
+/// </summary>
+public record GetUserInfoResponse(
+    string Id,
+
+    string? UserName,
+
+    string? Email,
+
+    Publicity DefaultPublicity);
 
 #endregion
 
-namespace ImageManager.Services.UserInfo;
+#region interface
 
 /// <summary>
 /// Contract for retrieving information about the currently authenticated user.
@@ -17,5 +35,7 @@ public interface IUserInfoService
     /// </summary>
     /// <param name="principal">The <see cref="ClaimsPrincipal"/> representing the current request.</param>
     /// <returns>A <see cref="GetUserInfoResponse"/> containing the user's data, or <c>null</c> if unavailable.</returns>
-    Task<GetUserInfoResponse?> GetCurrentUserInfoAsync(ClaimsPrincipal principal);
+    Task<Option<GetUserInfoResponse>> GetCurrentUserInfoAsync(ClaimsPrincipal principal);
 }
+
+#endregion

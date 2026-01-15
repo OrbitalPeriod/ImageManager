@@ -1,45 +1,12 @@
-﻿#region Usings
-
-using ImageManager.Controllers;
+﻿using ImageManager.Controllers;
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
 using ImageManager.Repositories;
+using ImageManager.Repositories.Repository_Interfaces;
 using Microsoft.EntityFrameworkCore;
-#endregion
 
 namespace ImageManager.Services.Query;
-
-#region Interface
-
-/// <summary>
-/// Contract for querying image collections, supporting pagination and filtering.
-/// </summary>
-public interface IImageQueryService
-{
-    /// <summary>
-    /// Retrieves a page of images that the caller can access.
-    /// The returned data contains only the image Id and age rating.
-    /// </summary>
-    Task<PaginatedResponse<ImageController.GetImagesResponse>> GetImagesAsync(
-        User? user,
-        Guid? token,
-        int page,
-        int pageSize);
-
-    /// <summary>
-    /// Searches for images that match the supplied filter criteria.
-    /// The returned data contains only the image Id and age rating.
-    /// </summary>
-    Task<PaginatedResponse<ImageController.GetSearchImagesResponse>> SearchImagesAsync(
-        User? user,
-        ImageController.GetSearchImagesRequest request,
-        int page,
-        int pageSize);
-}
-
-#endregion
-
-#region Implementation
 
 /// <summary>
 /// EF Core implementation of <see cref="IImageQueryService"/>.
@@ -50,15 +17,15 @@ public interface IImageQueryService
 public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepository) : IImageQueryService
 {
     /// <inheritdoc />
-    public async Task<PaginatedResponse<ImageController.GetImagesResponse>> GetImagesAsync(
+    public async Task<Result<PaginatedResponse<ImageController.GetImagesResponse>, ImageError>> GetImagesAsync(
         User? user,
         Guid? token,
         int page,
         int pageSize)
     {
         // Normalise pagination parameters.
-        if (page < 1) page = 1;
-        if (pageSize is < 1 or > 200) pageSize = 200;
+        if (page < 1 || pageSize < 1 || pageSize > 200)
+            return Result<PaginatedResponse<ImageController.GetImagesResponse>, ImageError>.Err(ImageError.InvalidPagination);
 
         // Base query: distinct images that the caller can access.
         var baseQuery = userOwnedImageRepository.AccessibleImages(user, token)
@@ -78,26 +45,26 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
             .Select(i => new ImageController.GetImagesResponse(i.Id, i.AgeRating))
             .ToArray();
 
-        return new PaginatedResponse<ImageController.GetImagesResponse>
+        return Result<PaginatedResponse<ImageController.GetImagesResponse>, ImageError>.Ok(new PaginatedResponse<ImageController.GetImagesResponse>
         {
             Data = imageData,
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
-        };
+        });
     }
 
     /// <inheritdoc />
-    public async Task<PaginatedResponse<ImageController.GetSearchImagesResponse>> SearchImagesAsync(
+    public async Task<Result<PaginatedResponse<ImageController.GetSearchImagesResponse>, ImageError>> SearchImagesAsync(
         User? user,
         ImageController.GetSearchImagesRequest request,
         int page,
         int pageSize)
     {
         // Normalise pagination parameters.
-        if (page < 1) page = 1;
-        if (pageSize is < 1 or > 200) pageSize = 200;
+        if (page < 1 || pageSize < 1 || pageSize > 200)
+            return Result<PaginatedResponse<ImageController.GetSearchImagesResponse>, ImageError>.Err(ImageError.InvalidPagination);
 
         // Start from all images the caller can access; we do not expose a token filter here
         // because SearchImagesAsync already receives a dedicated request that may contain its own filters.
@@ -130,15 +97,13 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
             .Select(i => new ImageController.GetSearchImagesResponse(i.ImageId, i.Image.AgeRating))
             .ToArray();
 
-        return new PaginatedResponse<ImageController.GetSearchImagesResponse>
+        return Result<PaginatedResponse<ImageController.GetSearchImagesResponse>, ImageError>.Ok(new PaginatedResponse<ImageController.GetSearchImagesResponse>
         {
             Data = images,
             Page = page,
             PageSize = pageSize,
             TotalPages = totalPages,
             TotalItems = totalCount
-        };
+        });
     }
 }
-
-#endregion

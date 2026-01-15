@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 using ImageManager.Data.Models;
 using ImageManager.Services.ShareToken;
 using Microsoft.AspNetCore.Authorization;
@@ -13,6 +13,7 @@ namespace ImageManager.Controllers;
 /// platform‑token for a specific image.
 /// </summary>
 [ApiController]
+[Authorize]
 [Route("api/[controller]")]
 public sealed class ShareTokenController(
     UserManager<User> userManager,
@@ -33,6 +34,9 @@ public sealed class ShareTokenController(
     /// </returns>
     [Authorize]
     [HttpPost("add/{imageId:guid}")]
+    [ProducesResponseType(typeof(Guid), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AddPlatformToken(
         Guid imageId,
         [FromBody] AddPlatformTokenRequest request)
@@ -40,22 +44,9 @@ public sealed class ShareTokenController(
         var user = await userManager.GetUserAsync(User);
         if (user is null) return Unauthorized();
 
-        Guid? tokenId;
-        try
-        {
-            tokenId = await tokenService.AddPlatformTokenAsync(
-                imageId,
-                request.Expiration,
-                user);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Internal error: {ex.Message}");
-        }
-
-        if (!tokenId.HasValue) return NotFound();
-
-        return Ok(tokenId.Value);
+        var tokenResult = await tokenService.AddPlatformTokenAsync(imageId, request.Expiration, user);
+        if (tokenResult.IsNone) return NotFound();
+        return Ok(tokenResult.Unwrap());
     }
     #endregion
 }

@@ -1,8 +1,10 @@
-﻿#region Usings
+#region Usings
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
+using ImageManager.Extensions;
 using ImageManager.Services;
+using ImageManager.Services.Character;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 #endregion
@@ -16,7 +18,6 @@ namespace ImageManager.Controllers;
 [Route("api/characters")]
 public class CharacterController(
     UserManager<User> userManager,
-    ILogger<CharacterController> logger,
     ICharacterQueryService queryService) : ControllerBase
 {
     #region DTOs / Records
@@ -34,6 +35,9 @@ public class CharacterController(
     /// <param name="page">Page number (1‑based).</param>
     /// <param name="pageSize">Number of items per page.</param>
     [HttpGet]
+    [ProducesResponseType(typeof(PaginatedResponse<GetCharacterResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<PaginatedResponse<GetCharacterResponse>>> GetCharacters(
         [FromQuery] Guid? token,
         [FromQuery, Range(1, int.MaxValue)] int page = 1,
@@ -46,7 +50,7 @@ public class CharacterController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await queryService.GetCharactersAsync(user, token, page, pageSize);
-        return Ok(result);
+        return this.ToActionResult(result);
     }
 
     /// <summary>
@@ -57,6 +61,9 @@ public class CharacterController(
     /// <param name="page">Page number (1‑based).</param>
     /// <param name="pageSize">Number of items per page.</param>
     [HttpGet("search")]
+    [ProducesResponseType(typeof(PaginatedResponse<GetCharacterResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<PaginatedResponse<GetCharacterResponse>>> SearchCharacters(
         [FromQuery] string q = "",
         [FromQuery] Guid? token = null,
@@ -66,7 +73,7 @@ public class CharacterController(
         var user = await userManager.GetUserAsync(HttpContext.User);
 
         var result = await queryService.SearchAsync(user, token, q, page, pageSize);
-        return Ok(result);
+        return this.ToActionResult(result);
     }
     #endregion
 }

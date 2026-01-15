@@ -1,7 +1,5 @@
-﻿#region Usings
-
+﻿using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
-#endregion
 
 namespace ImageManager.Services.ShareToken;
 
@@ -32,7 +30,7 @@ public interface IShareTokenService
     /// applies its default expiry logic.
     /// </param>
     /// <param name="user">The user who owns the image.</param>
-    Task<Guid?> AddPlatformTokenAsync(Guid imageId, DateTime? expiration, User user);
+    Task<Option<Guid>> AddPlatformTokenAsync(Guid imageId, DateTime? expiration, User user);
 }
 
 #endregion

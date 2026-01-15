@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using Microsoft.AspNetCore.Identity;
@@ -49,6 +49,8 @@ public class AuthController(UserManager<User> userManager,
     /// Creates a new user account with the supplied email and password.
     /// </summary>
     [HttpPost("register")]
+    [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorsResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RegisterResponse>> Register([FromBody] RegisterRequest request)
     {
         var user = new User { UserName = request.Username, Email = request.Email };
@@ -74,6 +76,8 @@ public class AuthController(UserManager<User> userManager,
     /// Authenticates a user and issues an authentication cookie/session.
     /// </summary>
     [HttpPost("login")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
         var result = await signInManager.PasswordSignInAsync(
@@ -100,6 +104,7 @@ public class AuthController(UserManager<User> userManager,
     /// Signs the current user out.
     /// </summary>
     [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> Logout()
     {
         await signInManager.SignOutAsync();

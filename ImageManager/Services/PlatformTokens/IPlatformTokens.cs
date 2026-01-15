@@ -1,5 +1,6 @@
 ﻿#region Usings
 
+using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 #endregion
 
@@ -42,15 +43,7 @@ namespace ImageManager.Services.PlatformTokens
 
     #region Result enum
 
-    /// <summary>
-    /// Indicates the outcome of a delete operation.
-    /// </summary>
-    public enum DeleteResult { NotFound, Forbidden, Deleted }
-
-    /// <summary>
-    /// Indicates the outcome of a Queue operation.
-    /// </summary>
-    public enum QueueResult { NotFound, Forbidden, Ok }
+    // Error enums have been moved to PlatformTokenError.cs
 
     #endregion
 
@@ -75,8 +68,8 @@ namespace ImageManager.Services.PlatformTokens
         /// <summary>
         /// Deletes a token identified by <paramref name="id"/> if it belongs to <paramref name="user"/>.
         /// </summary>
-        /// <returns>A <see cref="DeleteResult"/> indicating whether the operation succeeded.</returns>
-        Task<DeleteResult> DeleteTokenAsync(Guid id, User user);
+        /// <returns>A result indicating whether the operation succeeded.</returns>
+        Task<Result<Unit, PlatformTokenError>> DeleteTokenAsync(Guid id, User user);
 
         /// <summary>
         /// Queues up a PlatformToken of user to be synced
@@ -84,7 +77,7 @@ namespace ImageManager.Services.PlatformTokens
         /// <param name="id">Id of token</param>
         /// <param name="user">user who owns the token</param>
         /// <returns></returns>
-        Task<QueueResult> QueueAsync(Guid id, User user);
+        Task<Result<Unit, PlatformTokenError>> QueueAsync(Guid id, User user);
 
         /// <summary>
         /// Get the logs associated with a specific id and user

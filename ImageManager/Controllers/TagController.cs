@@ -1,7 +1,8 @@
-﻿#region Usings
+#region Usings
 
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
+using ImageManager.Extensions;
 using ImageManager.Services.Tags;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -30,29 +31,20 @@ public sealed class TagController(
     /// <param name="pageSize">Number of items per page. Max 200.</param>
     /// <returns>Paginated response containing <see cref="TagCountDto"/> items.</returns>
     [HttpGet]
+    [ProducesResponseType(typeof(PaginatedResponse<TagCountDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<PaginatedResponse<TagCountDto>>> GetTags(
         [FromQuery] Guid? token,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        // Validate paging parameters
-        if (page < 1) page = 1;
-        if (pageSize is < 1 or > 200) pageSize = 200;
-
         var user = await userManager.GetUserAsync(User);
         if (user is null) return Unauthorized();
 
-        PaginatedResponse<TagCountDto> result;
-        try
-        {
-            result = await tagService.GetTagsAsync(user, token, page, pageSize);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Internal error: {ex.Message}");
-        }
-
-        return Ok(result);
+        var result = await tagService.GetTagsAsync(user, token, page, pageSize);
+        return this.ToActionResult(result);
     }
 
     /// <summary>
@@ -66,29 +58,21 @@ public sealed class TagController(
     /// <param name="pageSize">Number of items per page. Max 200.</param>
     /// <returns>Paginated response containing <see cref="TagCountDto"/> items.</returns>
     [HttpGet("search")]
+    [ProducesResponseType(typeof(PaginatedResponse<TagCountDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<PaginatedResponse<TagCountDto>>> SearchTags(
         [FromQuery] string q = "",
         [FromQuery] Guid? token = null,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        if (page < 1) page = 1;
-        if (pageSize is < 1 or > 200) pageSize = 200;
-
         var user = await userManager.GetUserAsync(User);
         if (user is null) return Unauthorized();
 
-        PaginatedResponse<TagCountDto> result;
-        try
-        {
-            result = await tagService.SearchTagsAsync(user, q, token, page, pageSize);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"Internal error: {ex.Message}");
-        }
-
-        return Ok(result);
+        var result = await tagService.SearchTagsAsync(user, q, token, page, pageSize);
+        return this.ToActionResult(result);
     }
 
     #endregion
