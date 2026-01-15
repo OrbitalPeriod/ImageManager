@@ -10,6 +10,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils/cn';
+import { UploadModal } from '@/components/ui/UploadModal';
+import { ErrorPopup } from '@/components/ui/ErrorPopup';
 
 const UploadIcon = () => (
   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,6 +46,8 @@ const LogOutIcon = () => (
 
 export function TopNavbar() {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
 
@@ -63,6 +67,20 @@ export function TopNavbar() {
     await logout();
   };
 
+  const handleUploadClick = () => {
+    if (!isAuthenticated) {
+      setUploadError('This feature is only accessible to logged in users');
+    } else {
+      setUploadModalOpen(true);
+    }
+  };
+
+  const handleUploadSuccess = (imageId: string) => {
+    // Optionally redirect to the uploaded image or refresh the page
+    // For now, just close the modal
+    setUploadModalOpen(false);
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full glass border-b border-border/50">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -78,13 +96,14 @@ export function TopNavbar() {
 
         {/* Navigation */}
         <nav className="hidden md:flex items-center gap-2">
-          <Link
-            href="/upload"
+          <button
+            onClick={handleUploadClick}
             className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+            disabled={isLoading}
           >
             <UploadIcon />
             Upload
-          </Link>
+          </button>
           <Link
             href="/tags"
             className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors"
@@ -152,6 +171,21 @@ export function TopNavbar() {
           )}
         </div>
       </div>
+
+      {/* Upload Modal */}
+      <UploadModal
+        isOpen={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        onSuccess={handleUploadSuccess}
+      />
+
+      {/* Upload Error Popup */}
+      {uploadError && (
+        <ErrorPopup
+          message={uploadError}
+          onClose={() => setUploadError(null)}
+        />
+      )}
     </header>
   );
 }

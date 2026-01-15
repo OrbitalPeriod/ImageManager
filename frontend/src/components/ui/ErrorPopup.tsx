@@ -6,7 +6,8 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface ErrorPopupProps {
   message: string;
@@ -14,9 +15,17 @@ interface ErrorPopupProps {
 }
 
 export function ErrorPopup({ message, onClose }: ErrorPopupProps) {
-  return (
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  const popupContent = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50"
       onClick={onClose}
     >
       <div
@@ -57,4 +66,6 @@ export function ErrorPopup({ message, onClose }: ErrorPopupProps) {
       </div>
     </div>
   );
+
+  return createPortal(popupContent, document.body);
 }
