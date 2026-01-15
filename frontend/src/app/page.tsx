@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { getClientApiClient } from '@/lib/api/client-client';
 import { handleApiResponseError, handleError, getErrorMessage } from '@/lib/errors/handlers';
@@ -24,7 +24,7 @@ interface SearchImagesResponse {
   totalPages: number;
 }
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const isInitialized = useRef(false);
@@ -278,5 +278,22 @@ export default function Home() {
         />
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background">
+        <TopNavbar />
+        <main>
+          <div className="flex items-center justify-center py-20">
+            <div className="text-foreground text-lg">Loading...</div>
+          </div>
+        </main>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }

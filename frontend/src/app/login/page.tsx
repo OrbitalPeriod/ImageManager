@@ -6,14 +6,14 @@
 
 'use client';
 
-import React, { useState, FormEvent, useEffect } from 'react';
+import React, { useState, FormEvent, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getClientApiClient } from '@/lib/api/client-client';
 import { useAuth } from '@/lib/auth/context';
 import { handleApiResponseError, handleError, getErrorMessage } from '@/lib/errors/handlers';
 import { ErrorPopup } from '@/components/ui/ErrorPopup';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -136,5 +136,23 @@ export default function LoginPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8 bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+              Loading...
+            </h2>
+          </div>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

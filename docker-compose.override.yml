@@ -5,13 +5,18 @@ services:
     profiles: ["Tagger"]
 
   imagemanager:
+    user: "${UID}:${GID}"
     ports:
       - "8080:8080"
+    volumes:
+      - "./ImageManager/images/:/Images"
     profiles: ["Backend"]
+
+  frontend:
+    ports: 
+      - "3000:3000"
+    profiles: ["Frontend"]
 
   database:
     ports:
       - "5432:5432"
-
-  frontend:
-    profiles: ["Frontend"]

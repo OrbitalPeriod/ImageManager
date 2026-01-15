@@ -40,14 +40,21 @@
       timeout: 2s
       retries: 10
 
+
   frontend:
     image: registry.orbitalperiod.net/frontend:latest
     build:
-      context: ./Frontend/
+      context: ./frontend/
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
     env_file:
       - "./.env"
       - "./.docker.env"
-    networks: ["imagemanager_network"]
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    restart: unless-stopped
+    networks:
+      - imagemanager_network
 
 networks:
   imagemanager_network:
