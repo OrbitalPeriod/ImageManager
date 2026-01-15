@@ -53,6 +53,8 @@ ENV HOSTNAME="0.0.0.0"
 
 # Allow runtime override of API URL (for server-side usage)
 # Note: Client-side code uses the value from build time
+# This will use the value from build time, or can be overridden at runtime
+ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 CMD ["node", "server.js"]

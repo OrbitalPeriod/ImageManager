@@ -5,14 +5,26 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
   output: 'standalone',
-  // Next.js should automatically read path aliases from tsconfig.json
-  // But we'll also configure webpack explicitly to ensure it works
   webpack: (config) => {
+    // Explicitly configure path alias to match tsconfig.json
     const srcPath = path.resolve(__dirname, 'src');
+    
+    // Ensure resolve object exists
+    config.resolve = config.resolve || {};
     config.resolve.alias = {
-      ...(config.resolve?.alias || {}),
+      ...(config.resolve.alias || {}),
       '@': srcPath,
     };
+    
+    // Ensure extensions include .ts and .tsx
+    config.resolve.extensions = [
+      ...(config.resolve.extensions || []),
+      '.ts',
+      '.tsx',
+      '.js',
+      '.jsx',
+    ];
+    
     return config;
   },
 };
