@@ -16,7 +16,11 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Verify files are copied correctly (debug step)
-RUN ls -la src/lib/api/ || echo "src/lib/api not found"
+RUN echo "=== Checking files ===" && \
+    ls -la src/lib/api/ && \
+    test -f src/lib/api/client-client.ts && echo "✓ client-client.ts exists" || echo "✗ client-client.ts missing" && \
+    test -f src/lib/utils/cn.ts && echo "✓ cn.ts exists" || echo "✗ cn.ts missing" && \
+    echo "=== Files check complete ==="
 
 # Set build-time environment variable
 # Note: NEXT_PUBLIC_ variables are embedded at build time in Next.js

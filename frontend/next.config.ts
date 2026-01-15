@@ -5,25 +5,28 @@ const nextConfig: NextConfig = {
   /* config options here */
   reactCompiler: true,
   output: 'standalone',
-  webpack: (config) => {
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
     // Explicitly configure path alias to match tsconfig.json
     const srcPath = path.resolve(__dirname, 'src');
     
+    // Log for debugging (will show in build output)
+    console.log('[Webpack Config] Setting alias @ to:', srcPath);
+    console.log('[Webpack Config] Files exist check:', require('fs').existsSync(path.join(srcPath, 'lib/api/client-client.ts')));
+    
     // Ensure resolve object exists
-    config.resolve = config.resolve || {};
+    if (!config.resolve) {
+      config.resolve = {};
+    }
+    
+    // Set up aliases - this should handle @/ imports
+    const existingAliases = config.resolve.alias || {};
     config.resolve.alias = {
-      ...(config.resolve.alias || {}),
+      ...existingAliases,
       '@': srcPath,
     };
     
-    // Ensure extensions include .ts and .tsx
-    config.resolve.extensions = [
-      ...(config.resolve.extensions || []),
-      '.ts',
-      '.tsx',
-      '.js',
-      '.jsx',
-    ];
+    // Log the final alias configuration
+    console.log('[Webpack Config] Final aliases:', config.resolve.alias);
     
     return config;
   },
