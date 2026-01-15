@@ -48,5 +48,13 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Image>().HasOne(i => i.DownloadedImage).WithMany(di => di.Images).IsRequired(false)
             .HasForeignKey(i => i.DownloadedImageId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        // Configure StoredAt default values
+        builder.Entity<Image>().Property(i => i.StoredAt)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        builder.Entity<UserOwnedImage>().Property(uoi => uoi.StoredAt)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+        builder.Entity<DownloadedImage>().Property(di => di.StoredAt)
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
     }
 }

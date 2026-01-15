@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using ImageManager.Repositories;
 
 namespace ImageManager.Data.Models;
@@ -17,4 +17,5 @@ public class UserOwnedImage : IEntity<Guid>, IUserOwnedEntity
     public required Guid ImageId { get; init; }
     public Image Image { get; private set; } = null!;
 
+    public DateTime StoredAt { get; init; }
 }

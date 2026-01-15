@@ -11,4 +11,6 @@ public class DownloadedImage : IEntity<Guid>
     public required int PlatformImageId { get; init; }
 
     public ICollection<Image> Images { get; init; } = [];
+
+    public DateTime StoredAt { get; init; }
 }

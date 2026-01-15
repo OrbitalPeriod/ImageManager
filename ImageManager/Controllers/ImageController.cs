@@ -32,7 +32,7 @@ public class ImageController(
 
     #region DTOs used by this controller
     /// <summary>Response returned for a paginated list of images.</summary>
-    public record GetImagesResponse(Guid Id, AgeRating Rating);
+    public record GetImagesResponse(Guid Id, AgeRating Rating, DateTime StoredAt);
 
     /// <summary>Request payload for uploading an image.</summary>
     public record UploadImageRequest(
@@ -45,7 +45,8 @@ public class ImageController(
         ICollection<string> Tags,
         ICollection<string> Characters,
         AgeRating Rating,
-        ICollection<string> OwnerIds);
+        ICollection<string> OwnerIds,
+        DateTime StoredAt);
 
     /// <summary>Query parameters for searching images.</summary>
     public record GetSearchImagesRequest(
@@ -54,7 +55,7 @@ public class ImageController(
         ICollection<AgeRating>? Rating);
 
     /// <summary>Response returned for a paginated list of search results.</summary>
-    public record GetSearchImagesResponse(Guid Id, AgeRating Rating);
+    public record GetSearchImagesResponse(Guid Id, AgeRating Rating, DateTime StoredAt);
     #endregion
 
     #region Actions

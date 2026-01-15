@@ -42,7 +42,7 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
             .ToArrayAsync();
 
         var imageData = images
-            .Select(i => new ImageController.GetImagesResponse(i.Id, i.AgeRating))
+            .Select(i => new ImageController.GetImagesResponse(i.Id, i.AgeRating, i.StoredAt))
             .ToArray();
 
         return Result<PaginatedResponse<ImageController.GetImagesResponse>, ImageError>.Ok(new PaginatedResponse<ImageController.GetImagesResponse>
@@ -94,7 +94,7 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
             .ToArrayAsync();
 
         var images = imagesData
-            .Select(i => new ImageController.GetSearchImagesResponse(i.ImageId, i.Image.AgeRating))
+            .Select(i => new ImageController.GetSearchImagesResponse(i.ImageId, i.Image.AgeRating, i.Image.StoredAt))
             .ToArray();
 
         return Result<PaginatedResponse<ImageController.GetSearchImagesResponse>, ImageError>.Ok(new PaginatedResponse<ImageController.GetSearchImagesResponse>
