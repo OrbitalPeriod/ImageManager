@@ -180,7 +180,19 @@ export default function Home() {
 
       const data = response.data as SearchImagesResponse | undefined;
       if (data) {
-        setImages(data.data || []);
+        // Sort images by storedAt (newest first)
+        const sortedImages = (data.data || []).sort((a, b) => {
+          // If both have storedAt, sort by date (newest first)
+          if (a.storedAt && b.storedAt) {
+            return new Date(b.storedAt).getTime() - new Date(a.storedAt).getTime();
+          }
+          // If only one has storedAt, prioritize it
+          if (a.storedAt && !b.storedAt) return -1;
+          if (!a.storedAt && b.storedAt) return 1;
+          // If neither has storedAt, maintain original order
+          return 0;
+        });
+        setImages(sortedImages);
         setTotalPages(data.totalPages || 1);
       } else {
         setImages([]);

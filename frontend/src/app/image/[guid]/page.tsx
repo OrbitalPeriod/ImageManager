@@ -26,6 +26,7 @@ interface ImageDataResponse {
   characters?: string[] | null;
   rating: number; // 0-3: General, Sensitive, Questionable, Explicit
   ownerIds?: string[] | null;
+  storedAt?: string;
 }
 
 // Icon components
@@ -412,6 +413,17 @@ export default function ImageDetailPage() {
                   <span className="text-muted-foreground">ID</span>
                   <span className="text-foreground font-mono text-xs">{imageData.id.substring(0, 8)}...</span>
                 </div>
+                {imageData.storedAt && (
+                  <>
+                    <Separator className="bg-border/50" />
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Stored At</span>
+                      <span className="text-foreground">
+                        {new Date(imageData.storedAt).toLocaleString()}
+                      </span>
+                    </div>
+                  </>
+                )}
                 {imageData.ownerIds && imageData.ownerIds.length > 0 && (
                   <>
                     <Separator className="bg-border/50" />

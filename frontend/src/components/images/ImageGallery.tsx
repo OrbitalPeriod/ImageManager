@@ -17,6 +17,7 @@ export interface ImageData {
   artist?: string;
   likes?: number;
   views?: number;
+  storedAt?: string;
 }
 
 interface ImageGalleryProps {
