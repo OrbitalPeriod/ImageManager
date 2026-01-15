@@ -309,6 +309,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+# Exception: Don't ignore frontend/src/lib/ (it contains source code)
+!frontend/src/lib/
 lib64/
 parts/
 sdist/
