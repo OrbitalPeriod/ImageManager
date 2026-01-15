@@ -1,4 +1,4 @@
-﻿using ImageManager.Controllers;
+using ImageManager.Controllers;
 using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
@@ -25,12 +25,9 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
 
         var baseQuery = userOwnedImageRepository.AccessibleImages(user, token);
 
-        // Total count for paging metadata
-        var totalCount = await baseQuery.CountAsync();
-        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
-
         // Retrieve the requested page of character counts
-        var characters = await baseQuery
+        // First group by ID and Name to get counts per character entity
+        var characterCounts = await baseQuery
             .SelectMany(i => i.Image.Characters)
             .Select(c => new
             {
@@ -44,11 +41,29 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
                 g.Key.Name,
                 Count = g.Count(),
             })
+            .ToListAsync();
+
+        // Then group by Name only to merge duplicates and pick the minimum ID
+        var groupedCharacters = characterCounts
+            .GroupBy(c => c.Name)
+            .Select(g => new
+            {
+                Id = g.OrderBy(c => c.Id).First().Id,
+                Name = g.Key,
+                Count = g.Sum(c => c.Count)
+            })
             .OrderByDescending(x => x.Count)
+            .ToList();
+
+        // Total count for paging metadata (count unique characters by name)
+        var totalCount = groupedCharacters.Count;
+        var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        var characters = groupedCharacters
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(x => new CharacterController.GetCharacterResponse(x.Id, x.Name, x.Count))
-            .ToArrayAsync();
+            .ToArray();
 
         return Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>.Ok(new PaginatedResponse<CharacterController.GetCharacterResponse>
         {
@@ -84,24 +99,37 @@ public class CharacterQueryService(IUserOwnedImageRepository userOwnedImageRepos
                 EF.Functions.Like(c.Name.ToLower(), $"%{lowerSearch}%"));
         }
 
-        // Group by character to count usage
-        var grouped = charactersQuery
+        // Group by character name to count usage and handle duplicates
+        // First group by ID and Name to get counts per character entity
+        var characterCounts = await charactersQuery
             .GroupBy(c => new { c.Id, c.Name })
             .Select(g => new
             {
                 Id = g.Key.Id,
                 Name = g.Key.Name,
                 Count = g.Count()
-            });
+            })
+            .ToListAsync();
 
-        var totalCount = await grouped.CountAsync();
+        // Then group by Name only to merge duplicates and pick the minimum ID
+        var grouped = characterCounts
+            .GroupBy(c => c.Name)
+            .Select(g => new
+            {
+                Id = g.OrderBy(c => c.Id).First().Id,
+                Name = g.Key,
+                Count = g.Sum(c => c.Count)
+            })
+            .OrderByDescending(x => x.Count)
+            .ToList();
+
+        var totalCount = grouped.Count;
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-        var pageData = await grouped
-            .OrderByDescending(x => x.Count)
+        var pageData = grouped
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .ToListAsync();
+            .ToList();
 
         return Result<PaginatedResponse<CharacterController.GetCharacterResponse>, CharacterError>.Ok(new PaginatedResponse<CharacterController.GetCharacterResponse>
         {
