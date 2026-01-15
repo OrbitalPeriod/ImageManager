@@ -170,7 +170,7 @@ export function AutocompleteInput({
             <ul className="py-1">
               {suggestions.map((suggestion, index) => (
                 <li
-                  key={suggestion.id}
+                  key={`${suggestion.id}-${index}`}
                   onClick={() => handleSuggestionClick(suggestion)}
                   className={cn(
                     'px-4 py-2 text-sm cursor-pointer transition-colors',

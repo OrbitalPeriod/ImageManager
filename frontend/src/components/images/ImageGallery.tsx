@@ -61,6 +61,18 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [downloadingImages, setDownloadingImages] = useState<Set<string>>(new Set());
 
+  // Deduplicate images by ID to prevent duplicate key errors
+  const uniqueImages = React.useMemo(() => {
+    const seen = new Set<string>();
+    return images.filter((image) => {
+      if (seen.has(image.id)) {
+        return false;
+      }
+      seen.add(image.id);
+      return true;
+    });
+  }, [images]);
+
   const handleImageError = (imageId: string) => {
     setImageErrors((prev) => new Set(prev).add(imageId));
   };
@@ -118,7 +130,7 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
     }
   };
 
-  if (images.length === 0) {
+  if (uniqueImages.length === 0) {
     return (
       <section className="w-full py-8">
         <div className="container mx-auto px-4">
@@ -134,7 +146,7 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
     <section className="w-full py-8">
       <div className="container mx-auto px-4">
         <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
-          {images.map((image) => {
+          {uniqueImages.map((image) => {
             const badge = getRatingBadge(image.rating);
             const hasError = imageErrors.has(image.id);
             const thumbnailUrl = `${apiBaseUrl}/api/images/${image.id}/thumb`;
