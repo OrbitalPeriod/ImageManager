@@ -1,4 +1,4 @@
-﻿using ImageManager.Controllers;
+using ImageManager.Controllers;
 using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Data.Responses;
@@ -59,6 +59,7 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
     public async Task<Result<PaginatedResponse<ImageController.GetSearchImagesResponse>, ImageError>> SearchImagesAsync(
         User? user,
         ImageController.GetSearchImagesRequest request,
+        Guid? token,
         int page,
         int pageSize)
     {
@@ -66,9 +67,8 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
         if (page < 1 || pageSize < 1 || pageSize > 200)
             return Result<PaginatedResponse<ImageController.GetSearchImagesResponse>, ImageError>.Err(ImageError.InvalidPagination);
 
-        // Start from all images the caller can access; we do not expose a token filter here
-        // because SearchImagesAsync already receives a dedicated request that may contain its own filters.
-        var query = userOwnedImageRepository.AccessibleImages(user, null).AsQueryable();
+        // Start from all images the caller can access, using the provided token if available.
+        var query = userOwnedImageRepository.AccessibleImages(user, token).AsQueryable();
 
         // Apply tag filters if any.
         if (request.Tags != null && request.Tags.Any())

@@ -10,6 +10,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { getClientApiClient } from '@/lib/api/client-client';
 import { handleApiResponseError, handleError, getErrorMessage } from '@/lib/errors/handlers';
+import { useShareToken } from '@/lib/sharertoken/hooks';
 import { TopNavbar } from '@/components/layout/TopNavbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -128,6 +129,7 @@ const getRatingFullLabel = (rating: number): string => {
 export default function ImageDetailPage() {
   const params = useParams();
   const guid = params?.guid as string;
+  const { token } = useShareToken();
 
   const [imageData, setImageData] = useState<ImageDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -206,7 +208,11 @@ export default function ImageDetailPage() {
   const getImageUrl = (): string => {
     if (!guid) return '';
     const qualityPath = useOriginalQuality ? 'original' : '';
-    return `${apiBaseUrl}/api/images/${guid}${qualityPath ? '/' + qualityPath : ''}`;
+    let url = `${apiBaseUrl}/api/images/${guid}${qualityPath ? '/' + qualityPath : ''}`;
+    if (token) {
+      url += `${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+    }
+    return url;
   };
 
   // Download original image
@@ -218,7 +224,10 @@ export default function ImageDetailPage() {
 
     try {
       setImageLoading(true);
-      const downloadUrl = `${apiBaseUrl}/api/images/${guid}/original`;
+      let downloadUrl = `${apiBaseUrl}/api/images/${guid}/original`;
+      if (token) {
+        downloadUrl += `?token=${encodeURIComponent(token)}`;
+      }
       
       // Fetch the image with credentials to include auth cookies
       const response = await fetch(downloadUrl, {

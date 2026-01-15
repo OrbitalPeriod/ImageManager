@@ -216,12 +216,13 @@ public class ImageController(
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<PaginatedResponse<GetSearchImagesResponse>>> Search(
         [FromQuery] GetSearchImagesRequest request,
+        [FromQuery] Guid? token,
         [FromQuery, Range(1, int.MaxValue)] int page = 1,
         [FromQuery, Range(1, 200)] int pageSize = 20)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
 
-        var result = await imageQueryService.SearchImagesAsync(user, request, page, pageSize);
+        var result = await imageQueryService.SearchImagesAsync(user, request, token, page, pageSize);
         return this.ToActionResult(result);
     }
     #endregion

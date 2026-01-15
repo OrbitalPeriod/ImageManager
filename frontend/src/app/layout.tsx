@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/context";
+import { ShareTokenProviderWrapper } from "@/lib/sharertoken/provider-wrapper";
+import { ShareTokenDebugWrapper } from "@/components/debug/ShareTokenDebugWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +31,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          {children}
+          <ShareTokenProviderWrapper>
+            {children}
+            <ShareTokenDebugWrapper />
+          </ShareTokenProviderWrapper>
         </AuthProvider>
       </body>
     </html>

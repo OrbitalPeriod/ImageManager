@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useShareToken } from '@/lib/sharertoken/hooks';
 import { cn } from '@/lib/utils/cn';
 
 export interface ImageData {
@@ -58,6 +59,7 @@ const getRatingBadge = (rating: number): { label: string; className: string } | 
 };
 
 export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
+  const { token } = useShareToken();
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [downloadingImages, setDownloadingImages] = useState<Set<string>>(new Set());
 
@@ -86,7 +88,10 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
 
     try {
       setDownloadingImages((prev) => new Set(prev).add(imageId));
-      const downloadUrl = `${apiBaseUrl}/api/images/${imageId}/original`;
+      let downloadUrl = `${apiBaseUrl}/api/images/${imageId}/original`;
+      if (token) {
+        downloadUrl += `?token=${encodeURIComponent(token)}`;
+      }
       
       // Fetch the image with credentials to include auth cookies
       const response = await fetch(downloadUrl, {
@@ -149,7 +154,10 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
           {uniqueImages.map((image) => {
             const badge = getRatingBadge(image.rating);
             const hasError = imageErrors.has(image.id);
-            const thumbnailUrl = `${apiBaseUrl}/api/images/${image.id}/thumb`;
+            let thumbnailUrl = `${apiBaseUrl}/api/images/${image.id}/thumb`;
+            if (token) {
+              thumbnailUrl += `?token=${encodeURIComponent(token)}`;
+            }
 
             return (
               <Link
