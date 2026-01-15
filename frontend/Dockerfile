@@ -13,10 +13,18 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+
+# Copy source files explicitly to ensure they're included
+COPY package.json package-lock.json* ./
+COPY next.config.ts tsconfig.json ./
+COPY postcss.config.mjs eslint.config.mjs ./
+COPY public ./public
+COPY src ./src
 
 # Verify files are copied correctly (debug step)
 RUN echo "=== Checking files ===" && \
+    ls -la && \
+    ls -la src/ && \
     ls -la src/lib/api/ && \
     test -f src/lib/api/client-client.ts && echo "✓ client-client.ts exists" || echo "✗ client-client.ts missing" && \
     test -f src/lib/utils/cn.ts && echo "✓ cn.ts exists" || echo "✗ cn.ts missing" && \
