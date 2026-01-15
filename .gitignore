@@ -16,6 +16,8 @@ ImageManager/images
 
 # Build results
 [Dd]ebug/
+# Exception: Don't ignore frontend/src/components/debug/ (it contains source code)
+!frontend/src/components/debug/
 [Dd]ebugPublic/
 [Rr]elease/
 x64/
