@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 
 using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
@@ -33,6 +33,7 @@ public class PixivImportManager(
     IUserRepository userRepository,
     IDownloadedImageRepository downloadedImageRepository,
     IUserOwnedImageRepository userOwnedImageRepository,
+    IImageRepository imageRepository,
     ITransactionService transactionService) : IPixivImageImportManager
 {
     /// <inheritdoc />
@@ -125,18 +126,29 @@ public class PixivImportManager(
 
             try
             {
-                var notAdded = await downloadedImageRepository.ListAsync(
-                    di => existingIds.Contains(di.PlatformImageId) &&
-                          di.Image.UserOwnedImages.All(uoi => uoi.UserId != token.UserId));
+                var existingDownloadsForLinking = await downloadedImageRepository.ListAsync(
+                    di => existingIds.Contains(di.PlatformImageId));
 
-                foreach (var existingImage in notAdded)
+                foreach (var downloadedImage in existingDownloadsForLinking)
                 {
-                    newUserLinks.Add(new UserOwnedImage
+                    // Get all images linked to this DownloadedImage
+                    var images = await imageRepository.ListAsync(
+                        img => img.DownloadedImageId == downloadedImage.Id);
+
+                    // For each image, check if user already owns it
+                    foreach (var image in images)
                     {
-                        UserId = token.UserId,
-                        ImageId = existingImage.ImageId,
-                        Publicity = user.DefaultPublicity
-                    });
+                        var alreadyOwned = image.UserOwnedImages.Any(uoi => uoi.UserId == token.UserId);
+                        if (!alreadyOwned)
+                        {
+                            newUserLinks.Add(new UserOwnedImage
+                            {
+                                UserId = token.UserId,
+                                ImageId = image.Id,
+                                Publicity = user.DefaultPublicity
+                            });
+                        }
+                    }
                 }
 
                 if (newUserLinks.Any())
@@ -168,13 +180,21 @@ public class PixivImportManager(
 
 
     /// <summary>
-    /// Downloads a single illustration and imports it into the system.
+    /// Downloads all images from an illustration and imports them into the system.
+    /// All images are linked to the same DownloadedImage entity to track the source post.
     /// </summary>
     private async Task<Option<Unit>> DownloadImage(User user, IllustInfo illustration)
     {
-        var result = await transactionService.UseTransactionAsync(async () =>
+        Exception? caughtException = null;
+        Option<Unit> result;
+        
+        try
         {
-            var downloadResult = await pixivService.DownloadImage(illustration);
+            result = await transactionService.UseTransactionAsync(async () =>
+            {
+            try
+            {
+            var downloadResult = await pixivService.DownloadAllImages(illustration);
             
             if (!downloadResult.IsOk)
             {
@@ -193,63 +213,143 @@ public class PixivImportManager(
                 logger.LogWarning(
                     "Failed to download illustration {IllustrationId} ({Title}): {Error}",
                     illustration.Id, illustration.Title, errorMessage);
-                return Option<Guid>.None();
+                return Option<Unit>.None();
             }
 
-            var imageBytes = downloadResult.Unwrap();
-
-            var imageImportResult = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, user.Id);
-
-            if (!imageImportResult.IsOk)
+            var allImageBytes = downloadResult.Unwrap();
+            
+            if (allImageBytes.Length == 0)
             {
-                var error = imageImportResult.UnwrapError();
-                switch (error)
-                {
-                    case ImportImageError.AlreadyOwned:
-                        logger.LogError("Importing image: {illustrationId} already owned by {UserName} ({UserId})}", illustration.Id, user.UserName, user.Id);
-                        break;
-                    case ImportImageError.EmptyImage:
-                        logger.LogError("Importing image: {illustrationId} empty image", illustration.Id);
-                        break;
-                    case ImportImageError.FailedToGetTags:
-                        logger.LogError("Failed to get tags for image: {illustrationId}", illustration.Id);
-                        break;
-                    case ImportImageError.ImageParseFailed:
-                        logger.LogError("Failed to parse image: {illustrationId}", illustration.Id);
-                        break;
-                    case ImportImageError.ImageStoreError:
-                        logger.LogError("Failed to store image: {illustrationId}", illustration.Id);
-                        break;
-                }
-                return Option<Guid>.None();
+                logger.LogWarning(
+                    "No images downloaded for illustration {IllustrationId} ({Title})",
+                    illustration.Id, illustration.Title);
+                return Option<Unit>.None();
             }
 
-            var imageSuccessResult = imageImportResult.Unwrap();
-
-            // Check if image is already in downloaded
-            if (imageSuccessResult.NewFile)
+            // Get or create DownloadedImage entity for this post
+            var existingDownloadedImages = await downloadedImageRepository.ListAsync(
+                di => di.Platform == Platform.Pixiv && di.PlatformImageId == illustration.Id);
+            
+            DownloadedImage downloadedImage;
+            if (existingDownloadedImages.Any())
             {
-                await downloadedImageRepository.AddAsync(new DownloadedImage
+                downloadedImage = existingDownloadedImages.First();
+            }
+            else
+            {
+                downloadedImage = new DownloadedImage
                 {
                     Platform = Platform.Pixiv,
                     PlatformImageId = illustration.Id,
-                    ImageId = imageSuccessResult.Id,
-                });
+                };
+                await downloadedImageRepository.AddAsync(downloadedImage);
+                // Save the DownloadedImage to get its database-generated ID
+                // This is within the transaction, so it won't commit separately
+                await transactionService.SaveChangesAsync();
             }
 
-            return Option<Guid>.Some(imageSuccessResult.Id);
-        });
+            int successCount = 0;
+            int failCount = 0;
+
+            // Import each image and link it to the DownloadedImage
+            foreach (var imageBytes in allImageBytes)
+            {
+                var imageImportResult = await imageImportService.ImportImage(imageBytes, user.DefaultPublicity, user.Id);
+
+                if (!imageImportResult.IsOk)
+                {
+                    failCount++;
+                    var error = imageImportResult.UnwrapError();
+                    switch (error)
+                    {
+                        case ImportImageError.AlreadyOwned:
+                            logger.LogWarning("Image from illustration {IllustrationId} already owned by {UserName} ({UserId})", 
+                                illustration.Id, user.UserName, user.Id);
+                            break;
+                        case ImportImageError.EmptyImage:
+                            logger.LogWarning("Empty image from illustration {IllustrationId}", illustration.Id);
+                            break;
+                        case ImportImageError.FailedToGetTags:
+                            logger.LogWarning("Failed to get tags for image from illustration {IllustrationId}", illustration.Id);
+                            break;
+                        case ImportImageError.ImageParseFailed:
+                            logger.LogWarning("Failed to parse image from illustration {IllustrationId}", illustration.Id);
+                            break;
+                        case ImportImageError.ImageStoreError:
+                            logger.LogWarning("Failed to store image from illustration {IllustrationId}", illustration.Id);
+                            break;
+                    }
+                    continue;
+                }
+
+                var imageSuccessResult = imageImportResult.Unwrap();
+
+                // Link the Image to the DownloadedImage by setting DownloadedImageId
+                // The Image was just added to the context by ImageImportService but not yet saved
+                // GetByIdAsync uses FindAsync which checks the change tracker first before querying the database
+                var imageOption = await imageRepository.GetByIdAsync(imageSuccessResult.Id);
+                if (imageOption.IsSome)
+                {
+                    var image = imageOption.Unwrap();
+                    // Set DownloadedImageId - EF Core will track this change since the entity is tracked
+                    image.DownloadedImageId = downloadedImage.Id;
+                }
+                else
+                {
+                    logger.LogWarning("Image {ImageId} not found after import for illustration {IllustrationId}", 
+                        imageSuccessResult.Id, illustration.Id);
+                }
+
+                successCount++;
+            }
+
+            if (successCount == 0)
+            {
+                logger.LogWarning(
+                    "Failed to import any images for illustration {IllustrationId} ({Title})",
+                    illustration.Id, illustration.Title);
+                return Option<Unit>.None();
+            }
+
+            logger.LogInformation(
+                "Successfully imported {SuccessCount}/{TotalCount} images for illustration {IllustrationId} ({Title})",
+                successCount, allImageBytes.Length, illustration.Id, illustration.Title);
+
+            return Option<Unit>.Some(Unit.New());
+            }
+            catch (Exception ex)
+            {
+                caughtException = ex;
+                logger.LogError(ex, "Exception during image import for illustration {IllustrationId} ({Title})", illustration.Id, illustration.Title);
+                throw; // Re-throw to let transaction service handle rollback
+            }
+            });
+        }
+        catch (Exception ex)
+        {
+            caughtException = ex;
+            result = Option<Unit>.None();
+        }
 
         if (result.IsNone)
         {
-            logger.LogError("Unexpected error while processing illustration {IllustrationId}", illustration.Id);
+            if (caughtException != null)
+            {
+                logger.LogError(caughtException, "Unexpected error while processing illustration {IllustrationId} ({Title}): {ExceptionType} - {ExceptionMessage}", 
+                    illustration.Id, illustration.Title, caughtException.GetType().Name, caughtException.Message);
+            }
+            else
+            {
+                logger.LogError("Unexpected error while processing illustration {IllustrationId} ({Title}) - transaction returned None without exception", 
+                    illustration.Id, illustration.Title);
+            }
         }
         else
         {
             logger.LogInformation("Successfully downloaded and imported illustration {IllustrationId}", illustration.Id);
         }
 
-        return result.Map(_ => Unit.New());
+        return result;
     }
 }
 #endregion

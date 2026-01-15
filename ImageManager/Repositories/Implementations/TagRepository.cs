@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 
 using ImageManager.Data;
 using ImageManager.Data.Models;
@@ -45,7 +45,8 @@ public class TagRepository(ApplicationDbContext dbContext)
 
         var existing = await DbContext.Tags
             .Where(t => processedTags.Contains(t.Name))
-            .ToDictionaryAsync(t => t.Name, t => t);
+            .GroupBy(t => t.Name)
+            .ToDictionaryAsync(g => g.Key, g => g.First());
 
         var result = new List<Tag>(processedTags.Length);
         foreach (var name in processedTags)

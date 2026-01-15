@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using ImageManager.Repositories;
 
 namespace ImageManager.Data.Models;
@@ -10,7 +10,5 @@ public class DownloadedImage : IEntity<Guid>
     public required Platform Platform { get; init; }
     public required int PlatformImageId { get; init; }
 
-
-    public required Guid ImageId { get; init; }
-    public Image Image { get; private set; } = null!;
+    public ICollection<Image> Images { get; init; } = [];
 }

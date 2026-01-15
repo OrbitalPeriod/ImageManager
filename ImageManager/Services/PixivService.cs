@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 
 using ImageManager.Data.Helpers;
 using PixivCS.Api;
@@ -29,11 +29,11 @@ public interface IPixivService
     Task<Result<IllustInfo[], PixivError>> GetLikedBookmarks(string userId, string? refreshToken, bool checkPrivate);
 
     /// <summary>
-    /// Downloads the image data for a given illustration.
+    /// Downloads all images from a given illustration (all pages from MetaPages).
     /// </summary>
     /// <param name="illustration">Illustration metadata.</param>
-    /// <returns>A Result containing a byte array with the image data or an error.</returns>
-    Task<Result<byte[], PixivError>> DownloadImage(IllustInfo illustration);
+    /// <returns>A Result containing an array of byte arrays with the image data for each page, or an error.</returns>
+    Task<Result<byte[][], PixivError>> DownloadAllImages(IllustInfo illustration);
 }
 
 #region Implementation
@@ -61,7 +61,7 @@ public sealed class PixivService : IPixivService
         {
             MaxRetries = 3,
             EnableRetry = true,
-            TimeoutMs = 10000
+            TimeoutMs = 50000
         });
     }
 
@@ -216,31 +216,16 @@ public sealed class PixivService : IPixivService
         }
     }
 
-    public async Task<Result<byte[], PixivError>> DownloadImage(IllustInfo illustration)
+    /// <summary>
+    /// Downloads a single image from a URL with quality fallback.
+    /// </summary>
+    private async Task<Result<byte[], PixivError>> DownloadImageFromUrl(string? url)
     {
-        if (illustration == null)
+        if (string.IsNullOrWhiteSpace(url))
             return Result<byte[], PixivError>.Err(PixivError.InvalidInput);
 
         try
         {
-            var authResult = await EnsureAuthenticatedAsync();
-            if (!authResult.IsOk)
-                return Result<byte[], PixivError>.Err(authResult.UnwrapError());
-
-            var imageUrls = illustration.ImageUrls;
-            if (imageUrls == null && illustration?.MetaSinglePage?.OriginalImageUrl == null)
-                return Result<byte[], PixivError>.Err(PixivError.InvalidInput);
-
-            // Prefer the original URL, fall back to large.
-            var url = illustration.MetaPages.FirstOrDefault()?.ImageUrls?.Original ?? 
-                      illustration.MetaPages.FirstOrDefault()?.ImageUrls?.Large ?? 
-                      illustration?.MetaSinglePage?.OriginalImageUrl ?? 
-                      imageUrls!.Original ?? 
-                      imageUrls.Large;
-            
-            if (string.IsNullOrWhiteSpace(url))
-                return Result<byte[], PixivError>.Err(PixivError.InvalidInput);
-
             var imageData = await _api.DownloadImageAsync(url);
             if (imageData == null || imageData.Length == 0)
                 return Result<byte[], PixivError>.Err(PixivError.DownloadFailed);
@@ -282,6 +267,123 @@ public sealed class PixivService : IPixivService
         catch (Exception)
         {
             return Result<byte[], PixivError>.Err(PixivError.DownloadFailed);
+        }
+    }
+
+    /// <summary>
+    /// Gets the best available image URL from a MetaPage with quality fallback.
+    /// </summary>
+    private static string? GetImageUrlWithFallback(MetaPage? metaPage)
+    {
+        if (metaPage?.ImageUrls == null)
+            return null;
+
+        return metaPage.ImageUrls.Original
+            ?? metaPage.ImageUrls.Large
+            ?? metaPage.ImageUrls.Medium
+            ?? metaPage.ImageUrls.SquareMedium;
+    }
+
+    public async Task<Result<byte[][], PixivError>> DownloadAllImages(IllustInfo illustration)
+    {
+        if (illustration == null)
+            return Result<byte[][], PixivError>.Err(PixivError.InvalidInput);
+
+        try
+        {
+            var authResult = await EnsureAuthenticatedAsync();
+            if (!authResult.IsOk)
+                return Result<byte[][], PixivError>.Err(authResult.UnwrapError());
+
+            var downloadedImages = new List<byte[]>();
+
+            // Check if this is a multi-page post
+            if (illustration.MetaPages != null && illustration.MetaPages.Count > 0)
+            {
+                // Download all pages from MetaPages
+                foreach (var metaPage in illustration.MetaPages)
+                {
+                    var url = GetImageUrlWithFallback(metaPage);
+                    if (string.IsNullOrWhiteSpace(url))
+                    {
+                        // Try fallback to ImageUrls if MetaPage doesn't have URLs
+                        url = illustration.ImageUrls?.Original
+                            ?? illustration.ImageUrls?.Large
+                            ?? illustration.ImageUrls?.Medium
+                            ?? illustration.ImageUrls?.SquareMedium;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(url))
+                        continue; // Skip this page if no URL available
+
+                    var downloadResult = await DownloadImageFromUrl(url);
+                    if (downloadResult.IsOk)
+                    {
+                        downloadedImages.Add(downloadResult.Unwrap());
+                    }
+                    // Continue with next page even if this one fails
+                }
+            }
+            else
+            {
+                // Single-page post - use MetaSinglePage or ImageUrls
+                var url =
+                    illustration.MetaPages?.FirstOrDefault()?.ImageUrls?.Original ??
+                    illustration.MetaPages?.FirstOrDefault()?.ImageUrls?.Large ??
+                    illustration.MetaSinglePage?.OriginalImageUrl ??
+                    illustration.ImageUrls?.Original ??
+                    illustration.ImageUrls?.Large ??
+                    illustration.ImageUrls?.Medium;
+                if (string.IsNullOrWhiteSpace(url))
+                    return Result<byte[][], PixivError>.Err(PixivError.InvalidInput);
+
+                var downloadResult = await DownloadImageFromUrl(url);
+                if (!downloadResult.IsOk)
+                    return Result<byte[][], PixivError>.Err(downloadResult.UnwrapError());
+
+                downloadedImages.Add(downloadResult.Unwrap());
+            }
+
+            if (downloadedImages.Count == 0)
+                return Result<byte[][], PixivError>.Err(PixivError.DownloadFailed);
+
+            return Result<byte[][], PixivError>.Ok(downloadedImages.ToArray());
+        }
+        catch (TaskCanceledException)
+        {
+            return Result<byte[][], PixivError>.Err(PixivError.Timeout);
+        }
+        catch (TimeoutException)
+        {
+            return Result<byte[][], PixivError>.Err(PixivError.Timeout);
+        }
+        catch (HttpRequestException)
+        {
+            return Result<byte[][], PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (SocketException)
+        {
+            return Result<byte[][], PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (WebException)
+        {
+            return Result<byte[][], PixivError>.Err(PixivError.NetworkError);
+        }
+        catch (PixivAuthException)
+        {
+            return Result<byte[][], PixivError>.Err(PixivError.AuthenticationFailed);
+        }
+        catch (PixivRateLimitException)
+        {
+            return Result<byte[][], PixivError>.Err(PixivError.RateLimited);
+        }
+        catch (PixivApiException)
+        {
+            return Result<byte[][], PixivError>.Err(PixivError.ApiError);
+        }
+        catch (Exception)
+        {
+            return Result<byte[][], PixivError>.Err(PixivError.DownloadFailed);
         }
     }
 }

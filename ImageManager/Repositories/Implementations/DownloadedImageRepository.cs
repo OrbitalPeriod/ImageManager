@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 
 using ImageManager.Data;
 using ImageManager.Data.Models;
@@ -18,6 +18,6 @@ public class DownloadedImageRepository(ApplicationDbContext dbContext)
 {
     public Task<bool> ImageInDownloaded(Guid imageId)
     {
-        return DbContext.DownloadedImages.AnyAsync(i => i.ImageId == imageId);
+        return DbContext.DownloadedImages.AnyAsync(di => di.Images.Any(img => img.Id == imageId));
     }
 }

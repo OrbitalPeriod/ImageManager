@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using ImageManager.Repositories.Abstract_Interfaces;
@@ -48,7 +48,8 @@ public class CharacterRepository(ApplicationDbContext dbContext)
 
         var existing = await DbContext.Characters
             .Where(c => processed.Contains(c.Name))
-            .ToDictionaryAsync(c => c.Name, c => c);
+            .GroupBy(c => c.Name)
+            .ToDictionaryAsync(g => g.Key, g => g.First());
 
         var result = new List<Character>(processed.Length);
         foreach (var name in processed)
