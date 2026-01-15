@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils/cn';
 
 export interface ImageData {
@@ -58,9 +59,63 @@ const getRatingBadge = (rating: number): { label: string; className: string } | 
 
 export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [downloadingImages, setDownloadingImages] = useState<Set<string>>(new Set());
 
   const handleImageError = (imageId: string) => {
     setImageErrors((prev) => new Set(prev).add(imageId));
+  };
+
+  // Download original image
+  const handleDownload = async (e: React.MouseEvent, imageId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!imageId || !apiBaseUrl) return;
+
+    try {
+      setDownloadingImages((prev) => new Set(prev).add(imageId));
+      const downloadUrl = `${apiBaseUrl}/api/images/${imageId}/original`;
+      
+      // Fetch the image with credentials to include auth cookies
+      const response = await fetch(downloadUrl, {
+        credentials: 'include',
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to download image: ${response.statusText}`);
+      }
+
+      // Get the image as a blob
+      const blob = await response.blob();
+      
+      // Determine file extension from content type or default to jpg
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      const extension = contentType.includes('png') ? 'png' : 
+                       contentType.includes('webp') ? 'webp' : 
+                       contentType.includes('gif') ? 'gif' : 'jpg';
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `image-${imageId.substring(0, 8)}.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Failed to download image:', err);
+      // Optionally show a toast or error message here
+    } finally {
+      setDownloadingImages((prev) => {
+        const next = new Set(prev);
+        next.delete(imageId);
+        return next;
+      });
+    }
   };
 
   if (images.length === 0) {
@@ -85,9 +140,10 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
             const thumbnailUrl = `${apiBaseUrl}/api/images/${image.id}/thumb`;
 
             return (
-              <div
+              <Link
                 key={image.id}
-                className="break-inside-avoid group relative overflow-hidden rounded-lg bg-card border border-border/50 hover:border-primary/50 transition-all duration-300"
+                href={`/image/${image.id}`}
+                className="break-inside-avoid group relative overflow-hidden rounded-lg bg-card border border-border/50 hover:border-primary/50 transition-all duration-300 block"
               >
                 {/* Image */}
                 <div className="relative overflow-hidden">
@@ -109,17 +165,25 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
                   <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     {/* Quick Actions */}
                     <div className="absolute top-3 right-3 flex gap-2">
-                      <button className="p-2 rounded-full glass hover:bg-primary/20 transition-colors">
+                      <button 
+                        className="p-2 rounded-full glass hover:bg-primary/20 transition-colors"
+                        onClick={(e) => e.preventDefault()}
+                      >
                         <HeartIcon />
                       </button>
-                      <button className="p-2 rounded-full glass hover:bg-primary/20 transition-colors">
+                      <button 
+                        className="p-2 rounded-full glass hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={(e) => handleDownload(e, image.id)}
+                        disabled={downloadingImages.has(image.id)}
+                        title={downloadingImages.has(image.id) ? 'Downloading...' : 'Download original image'}
+                      >
                         <DownloadIcon />
                       </button>
                     </div>
 
                     {/* Info */}
                     {(image.title || image.artist || image.likes || image.views) && (
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
                         {image.title && (
                           <h3 className="font-medium text-foreground truncate">{image.title}</h3>
                         )}
@@ -149,14 +213,14 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
                 {badge && (
                   <div
                     className={cn(
-                      'absolute top-3 left-3 px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider',
+                      'absolute top-3 left-3 px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider pointer-events-none',
                       badge.className
                     )}
                   >
                     {badge.label}
                   </div>
                 )}
-              </div>
+              </Link>
             );
           })}
         </div>

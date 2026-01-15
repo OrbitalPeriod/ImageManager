@@ -1,4 +1,4 @@
-#region Usings
+﻿#region Usings
 
 using System.Threading.Channels;
 using ImageManager.Data;
@@ -48,7 +48,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Auth/Login";
     options.LogoutPath = "/Auth/Logout";
-    options.ExpireTimeSpan = TimeSpan.FromMinutes(5);
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(120);
     options.SlidingExpiration = true;
     options.Events.OnRedirectToLogin = ctx =>
     {
