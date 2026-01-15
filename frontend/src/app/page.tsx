@@ -5,7 +5,8 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { getClientApiClient } from '@/lib/api/client-client';
 import { handleApiResponseError, handleError, getErrorMessage } from '@/lib/errors/handlers';
 import { useDebounce } from '@/lib/hooks/useDebounce';
@@ -24,6 +25,10 @@ interface SearchImagesResponse {
 }
 
 export default function Home() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const isInitialized = useRef(false);
+
   // Search state
   const [characterSearch, setCharacterSearch] = useState('');
   const [tagSearch, setTagSearch] = useState('');
@@ -53,6 +58,76 @@ export default function Home() {
       .map((term) => term.trim())
       .filter((term) => term.length > 0);
   };
+
+  // Initialize state from URL parameters on mount
+  useEffect(() => {
+    if (isInitialized.current) return;
+    
+    const characters = searchParams.get('characters') || '';
+    const tags = searchParams.get('tags') || '';
+    const ratingsParam = searchParams.get('ratings');
+    const pageParam = searchParams.get('page');
+    const pageSizeParam = searchParams.get('pageSize');
+
+    if (characters) setCharacterSearch(characters);
+    if (tags) setTagSearch(tags);
+    
+    if (ratingsParam) {
+      const ratings = ratingsParam
+        .split(',')
+        .map((r) => parseInt(r.trim(), 10))
+        .filter((r) => !isNaN(r) && [0, 1, 2, 3].includes(r as AgeRating)) as AgeRating[];
+      if (ratings.length > 0) {
+        setSelectedRatings(ratings);
+      }
+    }
+
+    if (pageParam) {
+      const pageNum = parseInt(pageParam, 10);
+      if (!isNaN(pageNum) && pageNum >= 1) {
+        setPage(pageNum);
+      }
+    }
+
+    if (pageSizeParam) {
+      const pageSizeNum = parseInt(pageSizeParam, 10);
+      if (!isNaN(pageSizeNum) && pageSizeNum >= 1) {
+        setPageSize(pageSizeNum);
+      }
+    }
+
+    isInitialized.current = true;
+  }, [searchParams]);
+
+  // Update URL parameters when state changes
+  useEffect(() => {
+    if (!isInitialized.current) return;
+
+    const params = new URLSearchParams();
+
+    if (debouncedCharacterSearch) {
+      params.set('characters', debouncedCharacterSearch);
+    }
+    if (debouncedTagSearch) {
+      params.set('tags', debouncedTagSearch);
+    }
+    if (selectedRatings.length > 0) {
+      params.set('ratings', selectedRatings.join(','));
+    }
+    if (page > 1) {
+      params.set('page', page.toString());
+    }
+    if (pageSize !== 24) {
+      params.set('pageSize', pageSize.toString());
+    }
+
+    const newUrl = params.toString() ? `?${params.toString()}` : '/';
+    const currentUrl = searchParams.toString() ? `?${searchParams.toString()}` : '/';
+    
+    if (newUrl !== currentUrl) {
+      router.replace(newUrl, { scroll: false });
+    }
+  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize, router, searchParams]);
 
   // Fetch images from API
   const fetchImages = useCallback(async () => {
@@ -123,11 +198,14 @@ export default function Home() {
 
   // Fetch images when dependencies change
   useEffect(() => {
-    fetchImages();
+    if (isInitialized.current) {
+      fetchImages();
+    }
   }, [fetchImages]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
+    if (!isInitialized.current) return;
     if (page !== 1) {
       setPage(1);
     }
