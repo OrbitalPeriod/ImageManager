@@ -7,6 +7,8 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils/cn';
 
 const UploadIcon = () => (
@@ -42,6 +44,24 @@ const LogOutIcon = () => (
 
 export function TopNavbar() {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
+
+  const handleProfileClick = () => {
+    if (!isAuthenticated) {
+      // Redirect to login with return URL
+      const currentPath = window.location.pathname;
+      router.push(`/login?returnUrl=${encodeURIComponent(currentPath)}`);
+    } else {
+      // Toggle dropdown if authenticated
+      setDropdownOpen(!dropdownOpen);
+    }
+  };
+
+  const handleLogout = async () => {
+    setDropdownOpen(false);
+    await logout();
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full glass border-b border-border/50">
@@ -77,15 +97,16 @@ export function TopNavbar() {
         {/* Profile Dropdown */}
         <div className="relative">
           <button
-            onClick={() => setDropdownOpen(!dropdownOpen)}
+            onClick={handleProfileClick}
             className="relative h-10 w-10 rounded-full ring-2 ring-primary/30 hover:ring-primary transition-all flex items-center justify-center bg-secondary"
+            disabled={isLoading}
           >
             <div className="h-9 w-9 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center">
               <UserIcon />
             </div>
           </button>
 
-          {dropdownOpen && (
+          {dropdownOpen && isAuthenticated && !isLoading && (
             <>
               <div
                 className="fixed inset-0 z-40"
@@ -97,8 +118,8 @@ export function TopNavbar() {
                     <UserIcon />
                   </div>
                   <div className="flex flex-col space-y-0.5">
-                    <p className="text-sm font-medium">User</p>
-                    <p className="text-xs text-muted-foreground">user@example.com</p>
+                    <p className="text-sm font-medium">{user?.userName || 'User'}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email || ''}</p>
                   </div>
                 </div>
                 <div className="h-px bg-muted" />
@@ -121,7 +142,7 @@ export function TopNavbar() {
                 <div className="h-px bg-muted" />
                 <button
                   className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer text-destructive hover:bg-destructive/10 focus:bg-destructive/10 rounded-sm w-full text-left"
-                  onClick={() => setDropdownOpen(false)}
+                  onClick={handleLogout}
                 >
                   <LogOutIcon />
                   Sign Out

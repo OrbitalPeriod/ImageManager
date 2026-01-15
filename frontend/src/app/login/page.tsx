@@ -6,7 +6,8 @@
 
 'use client';
 
-import React, { useState, FormEvent } from 'react';
+import React, { useState, FormEvent, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getClientApiClient } from '@/lib/api/client-client';
 import { useAuth } from '@/lib/auth/context';
 import { handleApiResponseError, handleError, getErrorMessage } from '@/lib/errors/handlers';
@@ -17,7 +18,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { refreshUser } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { refreshUser, isAuthenticated } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const returnUrl = searchParams.get('returnUrl') || '/';
+      router.push(returnUrl);
+    }
+  }, [isAuthenticated, router, searchParams]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -46,9 +57,12 @@ export default function LoginPage() {
         return;
       }
 
-      // Success - log to console and refresh user
-      console.log('Login successful!', response.data);
+      // Success - refresh user data
       await refreshUser();
+      
+      // Redirect to return URL or home page
+      const returnUrl = searchParams.get('returnUrl') || '/';
+      router.push(returnUrl);
     } catch (err) {
       const appError = handleError(err);
       setError(getErrorMessage(appError));
