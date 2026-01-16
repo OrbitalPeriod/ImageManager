@@ -39,7 +39,10 @@ public class FolderImageImportService(
             // Optionally sync existing user folders at startup
             await SyncExistingUserFoldersAsync(stoppingToken);
 
-            // Setup FileSystemWatcher
+            // Process existing image files in the import folder
+            await ProcessExistingFilesAsync(stoppingToken);
+
+            // Setup FileSystemWatcher (after processing existing files to avoid double-processing)
             _fileWatcher = new FileSystemWatcher(_importDirectory)
             {
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
@@ -103,6 +106,96 @@ public class FolderImageImportService(
         {
             logger.LogError(ex, "Failed to sync existing user folders");
         }
+    }
+
+    /// <summary>
+    /// Scans and processes all existing image files in the import folder at startup.
+    /// </summary>
+    private async Task ProcessExistingFilesAsync(CancellationToken stoppingToken)
+    {
+        try
+        {
+            if (!Directory.Exists(_importDirectory))
+            {
+                logger.LogInformation("Import directory does not exist, skipping existing file processing");
+                return;
+            }
+
+            logger.LogInformation("Scanning import directory for existing image files: {Path}", _importDirectory);
+
+            var imageFiles = GetImageFilesRecursively(_importDirectory);
+            var fileCount = imageFiles.Count();
+
+            logger.LogInformation("Found {Count} existing image file(s) to process", fileCount);
+
+            if (fileCount == 0)
+                return;
+
+            // Process files sequentially to avoid overwhelming the system
+            foreach (var filePath in imageFiles)
+            {
+                if (stoppingToken.IsCancellationRequested)
+                    break;
+
+                try
+                {
+                    logger.LogInformation("Processing existing image file: {FilePath}", filePath);
+                    await ProcessImageFileAsync(filePath, stoppingToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to process existing file: {FilePath}", filePath);
+                    // Continue processing other files even if one fails
+                }
+
+                // Small delay between files to avoid overwhelming the system
+                await Task.Delay(TimeSpan.FromMilliseconds(100), stoppingToken);
+            }
+
+            logger.LogInformation("Finished processing existing image files");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to process existing files");
+        }
+    }
+
+    /// <summary>
+    /// Recursively finds all image files in the import directory.
+    /// </summary>
+    private IEnumerable<string> GetImageFilesRecursively(string directory)
+    {
+        var imageFiles = new List<string>();
+
+        try
+        {
+            // Get all image files in the current directory
+            foreach (var extension in ImageExtensions)
+            {
+                var files = Directory.EnumerateFiles(directory, $"*{extension}", SearchOption.TopDirectoryOnly);
+                imageFiles.AddRange(files);
+            }
+
+            // Recursively process subdirectories
+            var subdirectories = Directory.EnumerateDirectories(directory);
+            foreach (var subdirectory in subdirectories)
+            {
+                try
+                {
+                    imageFiles.AddRange(GetImageFilesRecursively(subdirectory));
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to scan subdirectory: {Path}", subdirectory);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to enumerate files in directory: {Path}", directory);
+        }
+
+        return imageFiles;
     }
 
     /// <summary>
