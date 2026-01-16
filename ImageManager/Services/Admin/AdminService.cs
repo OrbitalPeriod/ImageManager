@@ -114,6 +114,9 @@ public class AdminService(
             if (!addToRoleResult.Succeeded)
                 return Result<Unit, AdminError>.Err(AdminError.InternalError);
 
+            // Update SecurityStamp to invalidate existing cookies and force re-authentication with fresh claims
+            await userManager.UpdateSecurityStampAsync(user);
+
             return Result<Unit, AdminError>.Ok(Unit.New());
         }
         catch (Exception)
@@ -142,6 +145,9 @@ public class AdminService(
 
             if (!removeFromRoleResult.Succeeded)
                 return Result<Unit, AdminError>.Err(AdminError.InternalError);
+
+            // Update SecurityStamp to invalidate existing cookies and force re-authentication with fresh claims
+            await userManager.UpdateSecurityStampAsync(user);
 
             return Result<Unit, AdminError>.Ok(Unit.New());
         }
