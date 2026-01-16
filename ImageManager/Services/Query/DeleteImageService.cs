@@ -1,6 +1,8 @@
 ﻿using ImageManager.Data;
 using ImageManager.Data.Helpers;
+using ImageManager.Data.Models;
 using ImageManager.Services;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace ImageManager.Services.Query;
@@ -9,14 +11,18 @@ namespace ImageManager.Services.Query;
 /// EF Core implementation of <see cref="IDeleteImageService"/>.
 /// Uses the application's <see cref="ApplicationDbContext"/> to locate and delete
 /// a <c>UserOwnedImage</c> record that matches the supplied identifiers.
+/// Administrators can delete any image regardless of ownership.
 /// </summary>
 public class DeleteImageService(
     ApplicationDbContext dbContext,
-    ITransactionService transactionService) : IDeleteImageService
+    ITransactionService transactionService,
+    UserManager<User> userManager) : IDeleteImageService
 {
-    public async Task<Result<Unit, DeleteError>> DeleteAsync(Guid imageId, string userId)
+    private const string AdministratorRoleName = "Administrator";
+
+    public async Task<Result<Unit, DeleteError>> DeleteAsync(Guid imageId, User user)
     {
-        if (userId == null) throw new ArgumentNullException(nameof(userId));
+        if (user == null) throw new ArgumentNullException(nameof(user));
 
         return await transactionService.UseTransactionAsync(async () =>
         {
@@ -25,7 +31,12 @@ public class DeleteImageService(
 
             if (uoi == null) return Result<Unit, DeleteError>.Err(DeleteError.NotFound);
 
-            if (uoi.UserId != userId) return Result<Unit, DeleteError>.Err(DeleteError.Forbidden);
+            // Check if user is an administrator
+            var isAdmin = await userManager.IsInRoleAsync(user, AdministratorRoleName);
+
+            // Allow deletion if user owns the image OR if user is an administrator
+            if (uoi.UserId != user.Id && !isAdmin)
+                return Result<Unit, DeleteError>.Err(DeleteError.Forbidden);
 
             dbContext.UserOwnedImages.Remove(uoi);
             return Result<Unit, DeleteError>.Ok(Unit.New());

@@ -53,13 +53,18 @@ public class AuthController(UserManager<User> userManager,
     [ProducesResponseType(typeof(ErrorsResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<RegisterResponse>> Register([FromBody] RegisterRequest request)
     {
-        var user = new User { UserName = request.Username, Email = request.Email };
+        var user = new User 
+        { 
+            UserName = request.Username, 
+            Email = request.Email,
+            IsApproved = false
+        };
         var result = await userManager.CreateAsync(user, request.Password);
 
         if (result.Succeeded)
         {
             logger.LogInformation("User '{Email}' registered successfully.", request.Email);
-            return Ok(new RegisterResponse("User created"));
+            return Ok(new RegisterResponse("Registration successful. Your account is pending administrator approval."));
         }
 
         // Log the failure and return a structured error response.
@@ -78,24 +83,42 @@ public class AuthController(UserManager<User> userManager,
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var result = await signInManager.PasswordSignInAsync(
-            request.Username,
-            request.Password,
-            isPersistent: false,          // No persistent cookie for API
-            lockoutOnFailure: false);
-
-        if (result.Succeeded)
+        var user = await userManager.FindByNameAsync(request.Username);
+        
+        // Check if user exists and credentials are valid
+        if (user != null)
         {
-            logger.LogInformation("User '{Email}' logged in successfully.", request.Username);
-            return Ok(new { Message = "Login success" });
+            var passwordValid = await userManager.CheckPasswordAsync(user, request.Password);
+            if (passwordValid)
+            {
+                // Check if user is approved
+                if (!user.IsApproved)
+                {
+                    logger.LogWarning("Login attempt by unapproved user '{Email}'.", request.Username);
+                    return StatusCode(StatusCodes.Status403Forbidden, new ErrorResponse("Your account is pending administrator approval."));
+                }
+
+                // User is approved, proceed with sign in
+                var signInResult = await signInManager.PasswordSignInAsync(
+                    request.Username,
+                    request.Password,
+                    isPersistent: false,          // No persistent cookie for API
+                    lockoutOnFailure: false);
+
+                if (signInResult.Succeeded)
+                {
+                    logger.LogInformation("User '{Email}' logged in successfully.", request.Username);
+                    return Ok(new { Message = "Login success" });
+                }
+            }
         }
 
         logger.LogWarning(
-            "Login failed for {Email}. Result: {@Result}",
-            request.Username,
-            result);
+            "Login failed for {Email}.",
+            request.Username);
 
         return Unauthorized(new ErrorResponse("Login failed"));
     }

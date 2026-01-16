@@ -6,6 +6,7 @@ namespace ImageManager.Data.Models;
 public class User : IdentityUser, IEntity<string>
 {
     public Publicity DefaultPublicity { get; set; } = Publicity.Open;
+    public bool IsApproved { get; set; } = false;
 
     public ICollection<UserOwnedImage> Images { get; set; } = [];
     public ICollection<ShareToken> ShareTokens { get; set; } = [];

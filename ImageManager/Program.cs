@@ -7,6 +7,7 @@ using ImageManager.Repositories;
 using ImageManager.Repositories.Implementations;
 using ImageManager.Repositories.Repository_Interfaces;
 using ImageManager.Services;
+using ImageManager.Services.Admin;
 using ImageManager.Services.Character;
 using ImageManager.Services.File;
 using ImageManager.Services.ImageImport;
@@ -95,6 +96,7 @@ builder.Services.AddScoped<IShareTokenService, ShareTokenService>();
 
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IUserInfoService, UserInfoService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 #endregion
 
 #region External API Clients

@@ -103,7 +103,7 @@ public class ImageController(
 
     /// <summary>
     /// Deletes an existing image.  
-    /// Only the owner or a privileged user can delete; otherwise a 403 is returned.
+    /// Only the owner or an administrator can delete; otherwise a 403 is returned.
     /// </summary>
     [HttpDelete("{imageId:guid}")]
     [Authorize]
@@ -116,7 +116,7 @@ public class ImageController(
         var user = await userManager.GetUserAsync(HttpContext.User);
         if (user == null) return Unauthorized();
 
-        var result = await deleteImageService.DeleteAsync(imageId, user.Id);
+        var result = await deleteImageService.DeleteAsync(imageId, user);
         return this.ToActionResult(result);
     }
 
