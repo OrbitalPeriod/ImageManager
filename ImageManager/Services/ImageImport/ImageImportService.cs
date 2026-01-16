@@ -66,7 +66,7 @@ public class ImageImportService(
             if (!hasOwnership)
             {
                 await userOwnedImageRepository.AddAsync(
-                    new UserOwnedImage { ImageId = imageGuid, UserId = userId });
+                    new UserOwnedImage { ImageId = imageGuid, UserId = userId, Publicity = publicity });
                 return Result<ImportImageSuccess, ImportImageError>.Ok(new ImportImageSuccess()
                 {
                     Id = imageGuid,
@@ -129,7 +129,7 @@ public class ImageImportService(
         // 7️⃣  Add ownership record for the user
         // ------------------------------------------------------------------------
         await userOwnedImageRepository.AddAsync(
-            new UserOwnedImage { ImageId = imageGuid, UserId = userId });
+            new UserOwnedImage { ImageId = imageGuid, UserId = userId, Publicity = publicity });
 
         return Result<ImportImageSuccess, ImportImageError>.Ok(new ImportImageSuccess()
         {

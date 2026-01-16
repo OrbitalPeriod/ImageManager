@@ -38,18 +38,23 @@ public class UserOwnedImageRepository(ApplicationDbContext dbContext)
     public IQueryable<UserOwnedImage> AccessibleImages(string? id, Guid? token)
     {
         var baseQuery = DbContext.UserOwnedImages.Where(uoid =>
+            // User owns the image (always accessible regardless of publicity)
             (id != null && uoid.UserId == id) ||
 
+            // Public images: Open with General rating (visible to everyone, including anonymous)
             (uoid.Publicity == Publicity.Open &&
              uoid.Image.AgeRating == AgeRating.General) ||
 
+            // Public images: Open with sensitive/explicit/questionable rating (requires authenticated user)
             (uoid.Publicity == Publicity.Open &&
              (uoid.Image.AgeRating == AgeRating.Sensitive ||
               uoid.Image.AgeRating == AgeRating.Explicit ||
               uoid.Image.AgeRating == AgeRating.Questionable) &&
              id != null) ||
 
+            // Restricted images (requires authenticated user)
             (uoid.Publicity == Publicity.Restricted && id != null));
+        // Note: Private images are explicitly excluded - they are only accessible through ownership condition above
 
         if (token != null)
         {
