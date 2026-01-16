@@ -45,7 +45,7 @@ interface User {
 
 export default function AdminUsersPage() {
   const router = useRouter();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, isLoading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -53,6 +53,9 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
+
+  // Check if current user is admin
+  const isAdmin = currentUser?.roles?.includes('Administrator') ?? false;
 
   const shortenId = (id: string) => {
     return `${id.substring(0, 8)}...`;
@@ -83,7 +86,6 @@ export default function AdminUsersPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
-    setAccessDenied(false);
 
     try {
       const client = getClientApiClient();
@@ -91,13 +93,6 @@ export default function AdminUsersPage() {
 
       if (response.error) {
         const appError = handleApiResponseError(response);
-        
-        // Check if it's an access denied error (403 or 401)
-        if (appError instanceof Error && (appError.message.includes('403') || appError.message.includes('401'))) {
-          setAccessDenied(true);
-          return;
-        }
-        
         setError(getErrorMessage(appError));
         return;
       }
@@ -116,20 +111,24 @@ export default function AdminUsersPage() {
     } catch (err) {
       const appError = handleError(err);
       setError(getErrorMessage(appError));
-      
-      // Check if it's an access denied error
-      if (appError instanceof Error && (appError.message.includes('403') || appError.message.includes('401'))) {
-        setAccessDenied(true);
-      }
     } finally {
       setLoading(false);
     }
   }, [currentUser?.id]);
 
-  // Initial fetch on mount
+  // Initial fetch on mount - wait for auth to load first
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (!authLoading) {
+      // Check admin access immediately when auth loads
+      if (!isAdmin) {
+        setAccessDenied(true);
+        setLoading(false);
+        return;
+      }
+      // If admin, fetch users
+      fetchUsers();
+    }
+  }, [fetchUsers, authLoading, isAdmin]);
 
   // Handle user row click
   const handleUserClick = (user: User) => {
@@ -294,14 +293,14 @@ export default function AdminUsersPage() {
     }
   }, [accessDenied, router]);
 
-  // Loading state
-  if (loading) {
+  // Loading state (wait for auth to load first)
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background">
         <TopNavbar />
         <main className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center py-20">
-            <div className="text-foreground text-lg">Loading users...</div>
+            <div className="text-foreground text-lg">Loading...</div>
           </div>
         </main>
       </div>

@@ -1837,13 +1837,14 @@ export interface components {
         };
         /**
          * @description DTO returned by the user‑info service.
-         *     It contains the authenticated user’s basic profile data and the default publicity level
+         *     It contains the authenticated user's basic profile data, roles, and the default publicity level
          *     used when that user uploads a new image.
          */
         GetUserInfoResponse: {
             id?: string | null;
             userName?: string | null;
             email?: string | null;
+            roles?: string[] | null;
             defaultPublicity?: components["schemas"]["Publicity"];
         };
         /** @description Full image data exposed to the caller. */

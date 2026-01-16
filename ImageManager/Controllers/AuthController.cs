@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Services.FolderImport;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 #endregion
@@ -44,6 +45,13 @@ public class AuthController(UserManager<User> userManager,
 
     /// <summary>Container for multiple validation errors.</summary>
     public record ErrorsResponse(IEnumerable<string> Errors);
+
+    /// <summary>
+    /// Payload for changing password.
+    /// </summary>
+    public record ChangePasswordRequest(
+        [Required, MinLength(6)] string CurrentPassword,
+        [Required, MinLength(6)] string NewPassword);
     #endregion
 
     #region Actions
@@ -147,6 +155,40 @@ public class AuthController(UserManager<User> userManager,
         await signInManager.SignOutAsync();
         logger.LogInformation("User logged out.");
         return Ok(new { Message = "Logged out" });
+    }
+
+    /// <summary>
+    /// Changes the password for the current authenticated user.
+    /// </summary>
+    [Authorize]
+    [HttpPost("change-password")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ErrorResponse), StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        var user = await userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            return Unauthorized(new ErrorResponse("User not found"));
+        }
+
+        var changePasswordResult = await userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+
+        if (changePasswordResult.Succeeded)
+        {
+            logger.LogInformation("User '{UserId}' changed their password successfully.", user.Id);
+            return Ok(new { Message = "Password changed successfully" });
+        }
+
+        // Log the failure and return a structured error response.
+        var errors = changePasswordResult.Errors.Select(e => e.Description).ToList();
+        logger.LogWarning(
+            "Password change failed for user '{UserId}'. Errors: {@Errors}",
+            user.Id,
+            errors);
+
+        return BadRequest(new ErrorsResponse(errors));
     }
     #endregion
 }

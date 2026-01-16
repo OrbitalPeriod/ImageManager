@@ -2445,12 +2445,19 @@
             "type": "string",
             "nullable": true
           },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
           "defaultPublicity": {
             "$ref": "#/components/schemas/Publicity"
           }
         },
         "additionalProperties": false,
-        "description": "DTO returned by the user‑info service.\r\nIt contains the authenticated user’s basic profile data and the default publicity level\r\nused when that user uploads a new image."
+        "description": "DTO returned by the user‑info service.\r\nIt contains the authenticated user's basic profile data, roles, and the default publicity level\r\nused when that user uploads a new image."
       },
       "ImageDataResponse": {
         "type": "object",

@@ -50,12 +50,28 @@ const LogOutIcon = () => (
   </svg>
 );
 
+const ShieldIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+  </svg>
+);
+
 export function TopNavbar() {
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const [adminDropdownOpen, setAdminDropdownOpen] = React.useState(false);
   const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuth();
+
+  // Check if user is admin
+  const isAdmin = user?.roles?.includes('Administrator') ?? false;
 
   const handleProfileClick = () => {
     if (!isAuthenticated) {
@@ -63,9 +79,18 @@ export function TopNavbar() {
       const currentPath = window.location.pathname;
       router.push(`/login?returnUrl=${encodeURIComponent(currentPath)}`);
     } else {
+      // Close admin dropdown if open
+      setAdminDropdownOpen(false);
       // Toggle dropdown if authenticated
       setDropdownOpen(!dropdownOpen);
     }
+  };
+
+  const handleAdminClick = () => {
+    // Close profile dropdown if open
+    setDropdownOpen(false);
+    // Toggle admin dropdown
+    setAdminDropdownOpen(!adminDropdownOpen);
   };
 
   const handleLogout = async () => {
@@ -125,6 +150,37 @@ export function TopNavbar() {
               <KeyIcon />
               Platform Tokens
             </Link>
+          )}
+          {isAdmin && (
+            <div className="relative">
+              <button
+                onClick={handleAdminClick}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+                disabled={isLoading}
+              >
+                <ShieldIcon />
+                Admin
+              </button>
+
+              {adminDropdownOpen && !isLoading && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setAdminDropdownOpen(false)}
+                  />
+                  <div className="absolute left-0 mt-2 w-48 z-50 glass rounded-md border border-border shadow-lg">
+                    <Link
+                      href="/admin/users"
+                      className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer hover:bg-primary/10 focus:bg-primary/10 rounded-sm"
+                      onClick={() => setAdminDropdownOpen(false)}
+                    >
+                      <UsersIcon />
+                      Users
+                    </Link>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </nav>
 
