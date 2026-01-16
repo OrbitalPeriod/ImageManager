@@ -10,6 +10,8 @@ services:
       - "8080:8080"
     volumes:
       - "./ImageManager/images/:/Images"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
     profiles: ["Backend"]
 
   frontend:

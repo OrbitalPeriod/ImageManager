@@ -124,13 +124,24 @@ builder.Services.AddHostedService<RemoteSyncQueuingService>();
 #endregion
 
 #region Middleware & API Setup
+var allowedOrigin = builder.Configuration["CORS_ALLOWED_ORIGIN"];
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
         policy.AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowAnyOrigin();
+              .AllowAnyMethod();
+        
+        if (!string.IsNullOrEmpty(allowedOrigin))
+        {
+            policy.WithOrigins(allowedOrigin)
+                  .AllowCredentials();
+        }
+        else
+        {
+            policy.AllowAnyOrigin();
+        }
     });
 });
 
@@ -179,11 +190,11 @@ if (app.Environment.IsDevelopment())
 }
 #endregion
 
+app.UseCors();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-app.UseCors();
 
 app.Run();

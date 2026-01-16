@@ -19,6 +19,9 @@
       - "./.docker.env"
       - path: "./.secrets.env"
         required: false
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - CORS_ALLOWED_ORIGIN=https://animeimages.orbitalperiod.net
     volumes:
       - images:/Images
     depends_on:
