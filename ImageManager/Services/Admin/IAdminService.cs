@@ -14,10 +14,11 @@ public record PendingUserResponse(
     string? Email);
 
 /// <summary>
-/// DTO representing a user with their ID, roles, and approval status.
+/// DTO representing a user with their ID, username, roles, and approval status.
 /// </summary>
 public record UserListResponse(
     string Id,
+    string? UserName,
     ICollection<string> Roles,
     bool IsApproved);
 

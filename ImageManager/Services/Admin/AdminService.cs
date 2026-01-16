@@ -47,7 +47,7 @@ public class AdminService(
             foreach (var user in allUsers)
             {
                 var roles = await userManager.GetRolesAsync(user);
-                userList.Add(new UserListResponse(user.Id, roles.ToList(), user.IsApproved));
+                userList.Add(new UserListResponse(user.Id, user.UserName, roles.ToList(), user.IsApproved));
             }
 
             return Result<ICollection<UserListResponse>, AdminError>.Ok(userList);
