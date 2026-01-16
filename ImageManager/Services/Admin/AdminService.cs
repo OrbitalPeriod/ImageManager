@@ -37,6 +37,28 @@ public class AdminService(
     }
 
     /// <inheritdoc />
+    public async Task<Result<ICollection<UserListResponse>, AdminError>> GetAllUsersAsync()
+    {
+        try
+        {
+            var allUsers = await userRepository.GetAllAsync();
+            var userList = new List<UserListResponse>();
+
+            foreach (var user in allUsers)
+            {
+                var roles = await userManager.GetRolesAsync(user);
+                userList.Add(new UserListResponse(user.Id, roles.ToList(), user.IsApproved));
+            }
+
+            return Result<ICollection<UserListResponse>, AdminError>.Ok(userList);
+        }
+        catch (Exception)
+        {
+            return Result<ICollection<UserListResponse>, AdminError>.Err(AdminError.InternalError);
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<Result<Unit, AdminError>> ApproveUserAsync(string userId)
     {
         try

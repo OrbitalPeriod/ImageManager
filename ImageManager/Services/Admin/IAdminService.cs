@@ -13,6 +13,14 @@ public record PendingUserResponse(
     string? UserName,
     string? Email);
 
+/// <summary>
+/// DTO representing a user with their ID, roles, and approval status.
+/// </summary>
+public record UserListResponse(
+    string Id,
+    ICollection<string> Roles,
+    bool IsApproved);
+
 #endregion
 
 #region Interface
@@ -27,6 +35,12 @@ public interface IAdminService
     /// </summary>
     /// <returns>A collection of pending users.</returns>
     Task<Result<ICollection<PendingUserResponse>, AdminError>> GetPendingUsersAsync();
+
+    /// <summary>
+    /// Retrieves a list of all users with their ID, roles, and approval status.
+    /// </summary>
+    /// <returns>A collection of all users with their roles and approval status.</returns>
+    Task<Result<ICollection<UserListResponse>, AdminError>> GetAllUsersAsync();
 
     /// <summary>
     /// Approves a user, allowing them to log in.

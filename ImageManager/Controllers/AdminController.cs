@@ -21,6 +21,19 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
     #region Actions
 
     /// <summary>
+    /// Retrieves a list of all users with their ID, roles, and approval status.
+    /// </summary>
+    /// <returns>A collection of all users with their roles and approval status.</returns>
+    [HttpGet("users")]
+    [ProducesResponseType(typeof(ICollection<UserListResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ICollection<UserListResponse>>> GetAllUsers()
+    {
+        var result = await adminService.GetAllUsersAsync();
+        return this.ToActionResult(result);
+    }
+
+    /// <summary>
     /// Retrieves a list of all pending (unapproved) users.
     /// </summary>
     /// <returns>A collection of pending users.</returns>
