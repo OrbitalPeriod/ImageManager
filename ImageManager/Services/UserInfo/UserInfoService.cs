@@ -29,10 +29,12 @@ public class UserInfoService(
         if (userOption.IsNone) return Option<GetUserInfoResponse>.None();
 
         var user = userOption.Unwrap();
+        var roles = await userManager.GetRolesAsync(user);
         return Option<GetUserInfoResponse>.Some(new GetUserInfoResponse(
             user.Id,
             user.UserName,
             user.Email,
+            roles.ToList(),
             user.DefaultPublicity));
     }
 }

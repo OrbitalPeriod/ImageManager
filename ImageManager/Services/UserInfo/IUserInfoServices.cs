@@ -8,7 +8,7 @@ namespace ImageManager.Services.UserInfo;
 
 /// <summary>
 /// DTO returned by the user‑info service.
-/// It contains the authenticated user’s basic profile data and the default publicity level
+/// It contains the authenticated user's basic profile data, roles, and the default publicity level
 /// used when that user uploads a new image.
 /// </summary>
 public record GetUserInfoResponse(
@@ -17,6 +17,8 @@ public record GetUserInfoResponse(
     string? UserName,
 
     string? Email,
+
+    ICollection<string> Roles,
 
     Publicity DefaultPublicity);
 

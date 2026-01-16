@@ -1,5 +1,6 @@
 using ImageManager.Controllers;
 using ImageManager.Data.Helpers;
+using ImageManager.Services.Admin;
 using ImageManager.Services.Character;
 using ImageManager.Services.ImageImport;
 using ImageManager.Services.PlatformTokens;
@@ -108,6 +109,12 @@ public static class ControllerResultExtensions
             DeleteError.NotFound => controller.NotFound(),
             DeleteError.Forbidden => controller.Forbid(),
             
+            AdminError.NotFound => controller.NotFound(),
+            AdminError.AlreadyApproved => controller.BadRequest("User is already approved"),
+            AdminError.AlreadyAdministrator => controller.BadRequest("User is already an administrator"),
+            AdminError.NotAdministrator => controller.BadRequest("User is not an administrator"),
+            AdminError.InternalError => controller.StatusCode(500, "Internal server error"),
+            
             _ => controller.StatusCode(500, "Internal server error")
         };
     }
@@ -160,6 +167,12 @@ public static class ControllerResultExtensions
             AuthError.InvalidPassword => controller.BadRequest("Invalid password"),
             AuthError.InvalidEmail => controller.BadRequest("Invalid email"),
             AuthError.InternalError => controller.StatusCode(500, "Internal server error"),
+            
+            AdminError.NotFound => controller.NotFound(),
+            AdminError.AlreadyApproved => controller.BadRequest("User is already approved"),
+            AdminError.AlreadyAdministrator => controller.BadRequest("User is already an administrator"),
+            AdminError.NotAdministrator => controller.BadRequest("User is not an administrator"),
+            AdminError.InternalError => controller.StatusCode(500, "Internal server error"),
             
             _ => controller.StatusCode(500, "Internal server error")
         };

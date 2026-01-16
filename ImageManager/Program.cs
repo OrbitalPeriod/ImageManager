@@ -7,8 +7,10 @@ using ImageManager.Repositories;
 using ImageManager.Repositories.Implementations;
 using ImageManager.Repositories.Repository_Interfaces;
 using ImageManager.Services;
+using ImageManager.Services.Admin;
 using ImageManager.Services.Character;
 using ImageManager.Services.File;
+using ImageManager.Services.FolderImport;
 using ImageManager.Services.ImageImport;
 using ImageManager.Services.PlatformTokens;
 using ImageManager.Services.Query;
@@ -43,6 +45,12 @@ builder.Services.AddIdentity<User, IdentityRole>(options =>
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
+
+// Configure SecurityStamp validation to check on every request to immediately invalidate cookies after role changes
+builder.Services.Configure<SecurityStampValidatorOptions>(options =>
+{
+    options.ValidationInterval = TimeSpan.Zero;
+});
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -95,6 +103,8 @@ builder.Services.AddScoped<IShareTokenService, ShareTokenService>();
 
 builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IUserInfoService, UserInfoService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddSingleton<IFolderImportService, FolderImportService>();
 #endregion
 
 #region External API Clients
@@ -119,16 +129,30 @@ builder.Services.AddScoped<IPlatformTokenService, PlatformTokenService>();
 // Runs the RemoteSync loop in the background
 builder.Services.AddHostedService<RemoteSyncService>();
 builder.Services.AddHostedService<RemoteSyncQueuingService>();
+
+// Runs the folder image import service in the background
+builder.Services.AddHostedService<FolderImageImportService>();
 #endregion
 
 #region Middleware & API Setup
+var allowedOrigin = builder.Configuration["CORS_ALLOWED_ORIGIN"];
+
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
         policy.AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowAnyOrigin();
+              .AllowAnyMethod();
+        
+        if (!string.IsNullOrEmpty(allowedOrigin))
+        {
+            policy.WithOrigins(allowedOrigin)
+                  .AllowCredentials();
+        }
+        else
+        {
+            policy.AllowAnyOrigin();
+        }
     });
 });
 
@@ -177,11 +201,11 @@ if (app.Environment.IsDevelopment())
 }
 #endregion
 
+app.UseCors();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-app.UseCors();
 
 app.Run();
