@@ -1,9 +1,10 @@
-﻿#region Usings
+#region Usings
 
 using ImageManager.Data;
 using ImageManager.Data.Models;
 using ImageManager.Repositories.Abstract_Interfaces;
 using ImageManager.Repositories.Repository_Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 #endregion
 
@@ -60,6 +61,16 @@ public class UserOwnedImageRepository(ApplicationDbContext dbContext)
         }
 
         return baseQuery;
+    }
+
+    /// <summary>
+    /// Checks if a user directly owns an image, regardless of publicity settings.
+    /// This method checks the database directly without any filters.
+    /// </summary>
+    public async Task<bool> UserOwnsImageAsync(string userId, Guid imageId)
+    {
+        return await DbContext.UserOwnedImages
+            .AnyAsync(uoi => uoi.UserId == userId && uoi.ImageId == imageId);
     }
 
     #endregion

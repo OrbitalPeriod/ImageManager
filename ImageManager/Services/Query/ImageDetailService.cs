@@ -52,7 +52,7 @@ public class ImageDetailService(IImageRepository imageRepository) : IImageDetail
             image.Tags.Select(t => t.Name).ToArray(),
             image.Characters.Select(c => c.Name).ToArray(),
             image.AgeRating,
-            image.UserOwnedImages.Select(uoi => uoi.UserId).ToArray(),
+            image.UserOwnedImages.Select(uoi => uoi.UserId).Distinct().ToArray(),
             image.StoredAt);
 
         return Result<ImageController.ImageDataResponse, ImageError>.Ok(data);

@@ -1,4 +1,4 @@
-﻿using CoenM.ImageHash.HashAlgorithms;
+using CoenM.ImageHash.HashAlgorithms;
 using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories.Repository_Interfaces;
@@ -61,9 +61,7 @@ public class ImageImportService(
             imageGuid = existingImage.Id;
 
             // ---- Ensure the user is listed as an owner ---------------------------------
-            bool hasOwnership =
-                await userOwnedImageRepository.AccessibleImages(new User { Id = userId }, null)
-                                              .AnyAsync(i => i.ImageId == imageGuid);
+            bool hasOwnership = await userOwnedImageRepository.UserOwnsImageAsync(userId, imageGuid);
 
             if (!hasOwnership)
             {

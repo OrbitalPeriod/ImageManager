@@ -44,6 +44,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<Tag>().HasKey(i => i.Id);
         builder.Entity<UserOwnedImage>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Entity<UserOwnedImage>().HasKey(i => i.Id);
+        // Ensure a user can only own an image once
+        builder.Entity<UserOwnedImage>()
+            .HasIndex(uoi => new { uoi.ImageId, uoi.UserId })
+            .IsUnique();
 
         builder.Entity<Image>().HasOne(i => i.DownloadedImage).WithMany(di => di.Images).IsRequired(false)
             .HasForeignKey(i => i.DownloadedImageId)
