@@ -1,6 +1,7 @@
 #region Usings
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
+using ImageManager.Services.FolderImport;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 #endregion
@@ -14,6 +15,7 @@ namespace ImageManager.Controllers;
 [Route("api/auth")]
 public class AuthController(UserManager<User> userManager,
                            SignInManager<User> signInManager,
+                           IFolderImportService folderImportService,
                            ILogger<AuthController> logger) : ControllerBase
 {
     #region DTOs
@@ -64,6 +66,18 @@ public class AuthController(UserManager<User> userManager,
         if (result.Succeeded)
         {
             logger.LogInformation("User '{Email}' registered successfully.", request.Email);
+            
+            // Create import folder for the new user
+            try
+            {
+                folderImportService.CreateUserFolder(user.Id);
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail user creation if folder creation fails
+                logger.LogWarning(ex, "Failed to create import folder for user {UserId} during registration", user.Id);
+            }
+            
             return Ok(new RegisterResponse("Registration successful. Your account is pending administrator approval."));
         }
 

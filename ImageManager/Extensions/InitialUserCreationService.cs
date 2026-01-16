@@ -2,6 +2,7 @@
 using System.Text;
 using ImageManager.Data;
 using ImageManager.Data.Models;
+using ImageManager.Services.FolderImport;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +20,7 @@ public class InitialUserCreationService(
     RoleManager<IdentityRole> roleManager,
     ApplicationDbContext dbContext,
     IConfiguration configuration,
+    IFolderImportService folderImportService,
     ILogger<InitialUserCreationService> logger) : IInitialUserCreationService
 {
     private const string AdminPasswordEnvVar = "ADMIN_PASSWORD";
@@ -64,6 +66,17 @@ public class InitialUserCreationService(
                 var createdUser = await userManager.FindByEmailAsync(email);
                 if (createdUser != null)
                 {
+                    // Create import folder for the new user
+                    try
+                    {
+                        folderImportService.CreateUserFolder(createdUser.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log but don't fail user creation if folder creation fails
+                        logger.LogWarning(ex, "Failed to create import folder for admin user {UserId}", createdUser.Id);
+                    }
+
                     // Assign the Administrator role to the admin user
                     await userManager.AddToRoleAsync(createdUser, adminRoleName);
 
