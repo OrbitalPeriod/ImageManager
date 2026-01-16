@@ -138,7 +138,7 @@ public class PixivImportManager(
                     // For each image, check if user already owns it
                     foreach (var image in images)
                     {
-                        var alreadyOwned = image.UserOwnedImages.Any(uoi => uoi.UserId == token.UserId);
+                        var alreadyOwned = await userOwnedImageRepository.UserOwnsImageAsync(token.UserId, image.Id);
                         if (!alreadyOwned)
                         {
                             newUserLinks.Add(new UserOwnedImage
