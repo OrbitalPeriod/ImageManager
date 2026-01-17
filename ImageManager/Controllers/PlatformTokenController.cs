@@ -25,14 +25,15 @@ public class PlatformTokenController(
     [Authorize]
     [HttpPut("add")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> AddToken([FromBody] AddTokenRequest request)
     {
         var user = await userManager.GetUserAsync(HttpContext.User);
         if (user == null) return Unauthorized();
 
-        await tokenService.AddTokenAsync(request, user);
-        return Ok();
+        var result = await tokenService.AddTokenAsync(request, user);
+        return this.ToActionResult(result);
     }
 
     #endregion

@@ -12,6 +12,9 @@ public enum PlatformTokenError
     /// <summary>The user does not have permission to perform this operation.</summary>
     Forbidden,
     
+    /// <summary>Invalid input provided for the token request.</summary>
+    InvalidInput,
+    
     /// <summary>An internal error occurred while processing the token.</summary>
     InternalError
 }

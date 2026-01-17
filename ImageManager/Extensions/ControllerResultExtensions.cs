@@ -47,6 +47,7 @@ public static class ControllerResultExtensions
             
             PlatformTokenError.NotFound => controller.NotFound(),
             PlatformTokenError.Forbidden => controller.Forbid(),
+            PlatformTokenError.InvalidInput => controller.BadRequest("Token is required when CheckPrivate is enabled or for non-Pixiv platforms"),
             PlatformTokenError.InternalError => controller.StatusCode(500, "Internal server error"),
             
             DeleteError.NotFound => controller.NotFound(),
@@ -104,6 +105,7 @@ public static class ControllerResultExtensions
             
             PlatformTokenError.NotFound => controller.NotFound(),
             PlatformTokenError.Forbidden => controller.Forbid(),
+            PlatformTokenError.InvalidInput => controller.BadRequest("Token is required when CheckPrivate is enabled or for non-Pixiv platforms"),
             PlatformTokenError.InternalError => controller.StatusCode(500, "Internal server error"),
             
             DeleteError.NotFound => controller.NotFound(),
@@ -151,6 +153,7 @@ public static class ControllerResultExtensions
             
             PlatformTokenError.NotFound => controller.NotFound(),
             PlatformTokenError.Forbidden => controller.Forbid(),
+            PlatformTokenError.InvalidInput => controller.BadRequest("Token is required when CheckPrivate is enabled or for non-Pixiv platforms"),
             PlatformTokenError.InternalError => controller.StatusCode(500, "Internal server error"),
             
             DeleteError.NotFound => controller.NotFound(),

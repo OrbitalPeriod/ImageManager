@@ -58,7 +58,8 @@ namespace ImageManager.Services.PlatformTokens
         /// Creates a new token for the specified user.
         /// The service must validate the request and persist the token.
         /// </summary>
-        Task AddTokenAsync(AddTokenRequest request, User user);
+        /// <returns>A result indicating whether the operation succeeded.</returns>
+        Task<Result<Unit, PlatformTokenError>> AddTokenAsync(AddTokenRequest request, User user);
 
         /// <summary>
         /// Retrieves all tokens that belong to the given user.
