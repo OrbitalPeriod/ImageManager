@@ -23,17 +23,26 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
     /// <summary>
     /// Creates a new platform token for the specified user.
     /// The request and user are validated for null values; further business rules can be added here.
+    /// For Pixiv platform with CheckPrivate disabled, empty tokens are allowed since only public artwork will be imported.
     /// </summary>
-    public async Task AddTokenAsync(AddTokenRequest request, User user)
+    public async Task<Result<Unit, PlatformTokenError>> AddTokenAsync(AddTokenRequest request, User user)
     {
         if (request == null) throw new ArgumentNullException(nameof(request));
         if (user == null) throw new ArgumentNullException(nameof(user));
+
+        // Validate token requirement: For Pixiv with CheckPrivate disabled, empty tokens are allowed.
+        // Otherwise, require a non-empty token.
+        bool requiresToken = request.Platform != Platform.Pixiv || request.CheckPrivate;
+        if (requiresToken && string.IsNullOrWhiteSpace(request.Token))
+        {
+            return Result<Unit, PlatformTokenError>.Err(PlatformTokenError.InvalidInput);
+        }
 
         var token = new PlatformToken
         {
             PlatformUserId = request.PlatformUserId,
             Expires = request.Expires,
-            Token = request.Token,
+            Token = request.Token ?? string.Empty, // Ensure non-null even if empty
             Platform = request.Platform,
             CheckPrivate = request.CheckPrivate,
             UserId = user.Id
@@ -44,6 +53,8 @@ public class PlatformTokenService(IPlatformTokenRepository platformTokenReposito
         await transactionService.SaveChangesAsync();
 
         await platformSyncRequestChannel.Writer.WriteAsync(new PlatformSyncRequest(token.Id));
+        
+        return Result<Unit, PlatformTokenError>.Ok(Unit.New());
     }
 
     public async Task<IReadOnlyCollection<PlatformTokenSyncLog>?> GetLogAsync(Guid id, User user)
