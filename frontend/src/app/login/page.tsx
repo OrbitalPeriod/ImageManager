@@ -1,7 +1,7 @@
 /**
  * Login Page
  * 
- * Simple login page with email and password authentication.
+ * Simple login page with username and password authentication.
  */
 
 'use client';
@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 function LoginForm() {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,8 +40,8 @@ function LoginForm() {
     e.preventDefault();
     
     // Basic validation
-    if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password');
+    if (!username.trim() || !password.trim()) {
+      setError('Please enter both username and password');
       return;
     }
 
@@ -52,7 +52,7 @@ function LoginForm() {
       const client = getClientApiClient();
       const response = await client.POST('/api/auth/login', {
         body: {
-          username: email.trim(),
+          username: username.trim(),
           password: password.trim(),
         },
       });
@@ -101,19 +101,19 @@ function LoginForm() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">
-                Email
+              <Label htmlFor="username" className="text-sm font-medium">
+                Username
               </Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="your@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="your-username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 className="bg-background/50 border-primary/30 focus:border-primary"
                 required
                 disabled={loading}
-                autoComplete="email"
+                autoComplete="username"
               />
             </div>
 

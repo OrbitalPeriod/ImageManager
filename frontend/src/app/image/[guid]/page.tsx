@@ -6,17 +6,28 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getClientApiClient } from '@/lib/api/client-client';
 import { handleApiResponseError, handleError, getErrorMessage } from '@/lib/errors/handlers';
 import { useShareToken } from '@/lib/sharertoken/hooks';
+import { useAuth } from '@/lib/auth/context';
 import { TopNavbar } from '@/components/layout/TopNavbar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ErrorPopup } from '@/components/ui/ErrorPopup';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils/cn';
 
 // Type definitions
@@ -63,6 +74,18 @@ const FlagIcon = () => (
 const ExternalLinkIcon = () => (
   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+
+const OwnerIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
   </svg>
 );
 
@@ -129,16 +152,23 @@ const getRatingFullLabel = (rating: number): string => {
 
 export default function ImageDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const guid = params?.guid as string;
   const { token } = useShareToken();
+  const { user } = useAuth();
 
   const [imageData, setImageData] = useState<ImageDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useOriginalQuality, setUseOriginalQuality] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+
+  // Check if current user owns the image
+  const isOwner = user?.id && imageData?.ownerIds?.includes(user.id);
 
   // Fetch image metadata
   const fetchImageData = useCallback(async () => {
@@ -265,6 +295,41 @@ export default function ImageDetailPage() {
       setError(`Failed to download image: ${getErrorMessage(appError)}`);
     } finally {
       setImageLoading(false);
+    }
+  };
+
+  // Delete image
+  const handleDelete = async () => {
+    if (!guid) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const client = getClientApiClient();
+      const response = await client.DELETE('/api/images/{imageId}', {
+        params: {
+          path: {
+            imageId: guid,
+          },
+        },
+      });
+
+      if (response.error) {
+        const appError = handleApiResponseError(response);
+        setError(getErrorMessage(appError));
+        setDeleting(false);
+        setDeleteDialogOpen(false);
+        return;
+      }
+
+      // Successfully deleted, redirect to gallery
+      router.push('/');
+    } catch (err) {
+      const appError = handleError(err);
+      setError(getErrorMessage(appError));
+      setDeleting(false);
+      setDeleteDialogOpen(false);
     }
   };
 
@@ -441,10 +506,21 @@ export default function ImageDetailPage() {
           <div className="space-y-4">
             {/* Title and Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h1 className="font-display text-2xl md:text-3xl font-bold text-gradient">
-                Image {imageData.id.substring(0, 8)}
-              </h1>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <h1 className="font-display text-2xl md:text-3xl font-bold text-gradient">
+                  Image {imageData.id.substring(0, 8)}
+                </h1>
+                {isOwner && (
+                  <Badge 
+                    variant="secondary" 
+                    className="gap-1.5 bg-primary/20 text-primary border-primary/30"
+                  >
+                    <OwnerIcon />
+                    You own this
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
                 <Button variant="outline" size="sm" className="gap-2 border-border/50 hover:bg-primary/10 hover:text-primary hover:border-primary/50">
                   <HeartIcon />
                   Like
@@ -465,6 +541,18 @@ export default function ImageDetailPage() {
                 <Button variant="outline" size="sm" className="gap-2 border-border/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50">
                   <FlagIcon />
                 </Button>
+                {isOwner && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="gap-2 border-destructive/50 hover:bg-destructive/10 hover:text-destructive hover:border-destructive"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    disabled={deleting}
+                  >
+                    <TrashIcon />
+                    Delete
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -520,6 +608,28 @@ export default function ImageDetailPage() {
           onClose={() => setError(null)}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Image</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this image? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
