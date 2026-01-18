@@ -158,20 +158,33 @@ public class QueuedImageImportService(
                         queuedImport.UserId,
                         error);
                     
-                    // Check if it's a tagger service failure - if so, re-queue
-                    if (error == ImportImageError.FailedToGetTags || error == ImportImageError.QueuedForProcessing)
+                    // Check if it's a tagger service failure that should be re-queued
+                    // Note: We should NOT re-queue QueuedForProcessing because:
+                    // 1. We only process when IsReady is true, so QueuedForProcessing shouldn't occur
+                    // 2. If it does occur (service failed during processing), re-queueing would create an infinite loop
+                    // 3. The item will be picked up automatically in the next processing cycle when service becomes ready again
+                    if (error == ImportImageError.FailedToGetTags)
                     {
-                        // Service might have become unavailable again, re-queue
-                        try
+                        // Only re-queue if service is still not ready - otherwise it's a real error we shouldn't retry
+                        if (!taggerService.IsReady)
                         {
-                            await channel.Writer.WriteAsync(queuedImport, stoppingToken);
-                            logger.LogInformation("Re-queued import due to tagger service failure");
+                            try
+                            {
+                                await channel.Writer.WriteAsync(queuedImport, stoppingToken);
+                                logger.LogInformation("Re-queued import due to tagger service being unavailable");
+                            }
+                            catch (InvalidOperationException)
+                            {
+                                logger.LogWarning("Could not re-queue import after failure - queue may be full");
+                            }
                         }
-                        catch (InvalidOperationException)
+                        else
                         {
-                            logger.LogWarning("Could not re-queue import after failure - queue may be full");
+                            // Service is ready but still failed - this is a real error, don't re-queue
+                            logger.LogWarning("Tagger service is ready but import still failed with FailedToGetTags - not re-queueing");
                         }
                     }
+                    // Intentionally do not re-queue QueuedForProcessing to prevent infinite loops
                 }
             }
             catch (Exception ex) when (!(ex is OperationCanceledException))
