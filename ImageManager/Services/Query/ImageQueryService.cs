@@ -36,7 +36,7 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
         var images = await baseQuery
-            .OrderByDescending(i => i.Id)
+            .OrderByDescending(i => i.StoredAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToArrayAsync();
@@ -87,7 +87,7 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
 
         // Retrieve the requested page of data, including the related Image entity so we can read AgeRating.
         var imagesData = await query
-            .OrderByDescending(i => i.Id)
+            .OrderByDescending(i => i.Image.StoredAt)
             .Include(i => i.Image)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

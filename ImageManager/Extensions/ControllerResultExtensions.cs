@@ -58,6 +58,7 @@ public static class ControllerResultExtensions
             ImportImageError.ImageParseFailed => controller.BadRequest("Invalid image format"),
             ImportImageError.ImageStoreError => controller.Problem("Image IO failure"),
             ImportImageError.AlreadyOwned => controller.BadRequest("Image is already owned"),
+            ImportImageError.QueuedForProcessing => controller.Accepted("Image import queued for processing - AnimeTagger service is not yet ready"),
             
             AuthError.InvalidCredentials => controller.Unauthorized("Invalid credentials"),
             AuthError.UserAlreadyExists => controller.BadRequest("User already exists"),
@@ -164,6 +165,7 @@ public static class ControllerResultExtensions
             ImportImageError.ImageParseFailed => controller.BadRequest("Invalid image format"),
             ImportImageError.ImageStoreError => controller.Problem("Image IO failure"),
             ImportImageError.AlreadyOwned => controller.BadRequest("Image is already owned"),
+            ImportImageError.QueuedForProcessing => controller.Accepted("Image import queued for processing - AnimeTagger service is not yet ready"),
             
             AuthError.InvalidCredentials => controller.Unauthorized("Invalid credentials"),
             AuthError.UserAlreadyExists => controller.BadRequest("User already exists"),
