@@ -20,6 +20,8 @@ interface SearchSectionProps {
   onCharacterSearchChange: (value: string) => void;
   onTagSearchChange: (value: string) => void;
   onRatingChange: (rating: AgeRating) => void;
+  isInfiniteScroll?: boolean;
+  onInfiniteScrollChange?: (enabled: boolean) => void;
 }
 
 const UsersIcon = () => (
@@ -48,6 +50,8 @@ export function SearchSection({
   onCharacterSearchChange,
   onTagSearchChange,
   onRatingChange,
+  isInfiniteScroll = false,
+  onInfiniteScrollChange,
 }: SearchSectionProps) {
   const isRatingSelected = (rating: AgeRating) => selectedRatings.includes(rating);
 
@@ -139,7 +143,7 @@ export function SearchSection({
           />
         </div>
 
-        {/* Age Rating Selector */}
+        {/* Age Rating Selector and Infinite Scroll Toggle */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <span className="text-sm text-muted-foreground font-medium">Age Rating:</span>
           <div className="flex items-center justify-center gap-1 glass rounded-lg p-1">
@@ -162,6 +166,30 @@ export function SearchSection({
             })}
           </div>
         </div>
+
+        {/* Infinite Scroll Toggle */}
+        {onInfiniteScrollChange && (
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-sm text-muted-foreground">Pagination</span>
+            <button
+              onClick={() => onInfiniteScrollChange(!isInfiniteScroll)}
+              className={cn(
+                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                isInfiniteScroll ? 'bg-primary' : 'bg-muted'
+              )}
+              role="switch"
+              aria-checked={isInfiniteScroll}
+            >
+              <span
+                className={cn(
+                  'inline-block h-4 w-4 transform rounded-full bg-background transition-transform',
+                  isInfiniteScroll ? 'translate-x-6' : 'translate-x-1'
+                )}
+              />
+            </button>
+            <span className="text-sm text-muted-foreground">Infinite Scroll</span>
+          </div>
+        )}
       </div>
     </section>
   );
