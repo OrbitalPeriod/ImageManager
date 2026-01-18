@@ -3,8 +3,10 @@ using ImageManager.Data.Helpers;
 using ImageManager.Data.Models;
 using ImageManager.Repositories.Repository_Interfaces;
 using ImageManager.Services.File;
+using ImageManager.Workers;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Threading.Channels;
 
 
 namespace ImageManager.Services.ImageImport;
@@ -21,6 +23,7 @@ public class ImageImportService(
     IUserOwnedImageRepository userOwnedImageRepository,
     ITagRepository tagRepository,
     ICharacterRepository characterRepository,
+    Channel<QueuedImageImport> queueChannel,
     ILogger<ImageImportService> logger) : IImageImportService
 {
     private readonly AverageHash _hash = new AverageHash();
@@ -87,8 +90,34 @@ public class ImageImportService(
         {
             imageData = await taggerService.GetTags(imageBytes);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            // Check if the service is not ready - if so, queue the import for later processing
+            if (!taggerService.IsReady)
+            {
+                try
+                {
+                    var queuedImport = new QueuedImageImport(
+                        ImageBytes: imageBytes,
+                        Publicity: publicity,
+                        UserId: userId,
+                        QueuedAt: DateTime.UtcNow
+                    );
+
+                    await queueChannel.Writer.WriteAsync(queuedImport);
+                    logger.LogInformation(
+                        "AnimeTagger not ready. Queued image import for user {UserId} for later processing.",
+                        userId);
+                    return Result<ImportImageSuccess, ImportImageError>.Err(ImportImageError.QueuedForProcessing);
+                }
+                catch (Exception queueEx)
+                {
+                    logger.LogError(queueEx, "Failed to queue image import for user {UserId}. Queue may be full.", userId);
+                    // Fall through to return FailedToGetTags if queueing fails
+                }
+            }
+
+            logger.LogError(ex, "Failed to get tags from AnimeTagger for user {UserId}", userId);
             return Result<ImportImageSuccess, ImportImageError>.Err(ImportImageError.FailedToGetTags);
         }
 

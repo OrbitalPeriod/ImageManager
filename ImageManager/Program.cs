@@ -1,4 +1,4 @@
-﻿#region Usings
+#region Usings
 
 using System.Threading.Channels;
 using ImageManager.Data;
@@ -78,6 +78,11 @@ builder.Services.AddSingleton(Channel.CreateBounded<PlatformSyncRequest>(new Bou
     FullMode = BoundedChannelFullMode.Wait
 }));
 
+builder.Services.AddSingleton(Channel.CreateBounded<QueuedImageImport>(new BoundedChannelOptions(1000)
+{
+    FullMode = BoundedChannelFullMode.Wait
+}));
+
 #endregion
 
 
@@ -132,6 +137,9 @@ builder.Services.AddHostedService<RemoteSyncQueuingService>();
 
 // Runs the folder image import service in the background
 builder.Services.AddHostedService<FolderImageImportService>();
+
+// Processes queued image imports when AnimeTagger becomes ready
+builder.Services.AddHostedService<QueuedImageImportService>();
 #endregion
 
 #region Middleware & API Setup
