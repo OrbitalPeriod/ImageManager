@@ -36,7 +36,7 @@ function HomeContent() {
   const debouncedTagSearch = useDebounce(tagSearch, 400);
 
   // Filter state
-  const [selectedRatings, setSelectedRatings] = useState<AgeRating[]>([]);
+  const [selectedRatings, setSelectedRatings] = useState<AgeRating[]>([0]); // Default to General (0) rating
 
   // Pagination state
   const [page, setPage] = useState(1);
