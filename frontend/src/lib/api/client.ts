@@ -1172,6 +1172,7 @@ export interface paths {
                     Tags?: string[];
                     Characters?: string[];
                     Rating?: components["schemas"]["AgeRating"][];
+                    OwnedOnly?: boolean;
                     token?: string;
                     page?: number;
                     pageSize?: number;

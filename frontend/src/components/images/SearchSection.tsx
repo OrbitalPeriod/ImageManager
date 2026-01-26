@@ -22,6 +22,9 @@ interface SearchSectionProps {
   onRatingChange: (rating: AgeRating) => void;
   isInfiniteScroll?: boolean;
   onInfiniteScrollChange?: (enabled: boolean) => void;
+  ownedOnly?: boolean;
+  onOwnedOnlyChange?: (enabled: boolean) => void;
+  isAuthenticated?: boolean;
 }
 
 const UsersIcon = () => (
@@ -52,6 +55,9 @@ export function SearchSection({
   onRatingChange,
   isInfiniteScroll = false,
   onInfiniteScrollChange,
+  ownedOnly = false,
+  onOwnedOnlyChange,
+  isAuthenticated = false,
 }: SearchSectionProps) {
   const isRatingSelected = (rating: AgeRating) => selectedRatings.includes(rating);
 
@@ -166,6 +172,30 @@ export function SearchSection({
             })}
           </div>
         </div>
+
+        {/* Ownership Filter - Only for authenticated users */}
+        {isAuthenticated && onOwnedOnlyChange && (
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-sm text-muted-foreground">All Images</span>
+            <button
+              onClick={() => onOwnedOnlyChange(!ownedOnly)}
+              className={cn(
+                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                ownedOnly ? 'bg-primary' : 'bg-muted'
+              )}
+              role="switch"
+              aria-checked={ownedOnly}
+            >
+              <span
+                className={cn(
+                  'inline-block h-4 w-4 transform rounded-full bg-background transition-transform',
+                  ownedOnly ? 'translate-x-6' : 'translate-x-1'
+                )}
+              />
+            </button>
+            <span className="text-sm text-muted-foreground">My Images</span>
+          </div>
+        )}
 
         {/* Infinite Scroll Toggle */}
         {onInfiniteScrollChange && (

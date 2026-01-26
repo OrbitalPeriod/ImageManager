@@ -10,6 +10,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { getClientApiClient } from '@/lib/api/client-client';
 import { handleApiResponseError, handleError, getErrorMessage } from '@/lib/errors/handlers';
 import { useDebounce } from '@/lib/hooks/useDebounce';
+import { useIsAuthenticated } from '@/lib/auth/hooks';
 import { TopNavbar } from '@/components/layout/TopNavbar';
 import { SearchSection, type AgeRating } from '@/components/images/SearchSection';
 import { ImageGallery, type ImageData } from '@/components/images/ImageGallery';
@@ -38,6 +39,10 @@ function HomeContent() {
 
   // Filter state
   const [selectedRatings, setSelectedRatings] = useState<AgeRating[]>([0]); // Default to General (0) rating
+  const [ownedOnly, setOwnedOnly] = useState(false);
+
+  // Authentication state
+  const isAuthenticated = useIsAuthenticated();
 
   // Pagination state
   const [page, setPage] = useState(1);
@@ -105,6 +110,11 @@ function HomeContent() {
       }
     }
 
+    const ownedOnlyParam = searchParams.get('ownedOnly');
+    if (ownedOnlyParam === 'true') {
+      setOwnedOnly(true);
+    }
+
     isInitialized.current = true;
   }, [searchParams]);
 
@@ -129,6 +139,9 @@ function HomeContent() {
     if (pageSize !== 24) {
       params.set('pageSize', pageSize.toString());
     }
+    if (ownedOnly && isAuthenticated) {
+      params.set('ownedOnly', 'true');
+    }
 
     const newUrl = params.toString() ? `?${params.toString()}` : '/';
     const currentUrl = searchParams.toString() ? `?${searchParams.toString()}` : '/';
@@ -136,7 +149,7 @@ function HomeContent() {
     if (newUrl !== currentUrl) {
       router.replace(newUrl, { scroll: false });
     }
-  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize, router, searchParams]);
+  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize, ownedOnly, isAuthenticated, router, searchParams]);
 
   // Fetch images from API
   const fetchImages = useCallback(async (isLoadMore = false) => {
@@ -165,6 +178,7 @@ function HomeContent() {
         Characters?: string[];
         Tags?: string[];
         Rating?: AgeRating[];
+        OwnedOnly?: boolean;
       } = {
         page,
         pageSize,
@@ -178,6 +192,9 @@ function HomeContent() {
       }
       if (ratings && ratings.length > 0) {
         queryParams.Rating = ratings;
+      }
+      if (ownedOnly && isAuthenticated) {
+        queryParams.OwnedOnly = true;
       }
 
       const response = await client.GET('/api/images/search', {
@@ -252,7 +269,7 @@ function HomeContent() {
         setLoading(false);
       }
     }
-  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize, isInfiniteScroll]);
+  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize, ownedOnly, isAuthenticated, isInfiniteScroll]);
 
   // Fetch images when dependencies change
   useEffect(() => {
@@ -273,7 +290,7 @@ function HomeContent() {
       setHasMore(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, isInfiniteScroll]);
+  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, ownedOnly, isInfiniteScroll]);
 
   // Handle infinite scroll: load more when sentinel is visible
   useEffect(() => {
@@ -339,6 +356,9 @@ function HomeContent() {
           onRatingChange={handleRatingChange}
           isInfiniteScroll={isInfiniteScroll}
           onInfiniteScrollChange={handleInfiniteScrollChange}
+          ownedOnly={ownedOnly}
+          onOwnedOnlyChange={setOwnedOnly}
+          isAuthenticated={isAuthenticated}
         />
         {loading ? (
           <div className="flex items-center justify-center py-20">

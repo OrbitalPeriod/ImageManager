@@ -82,6 +82,10 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
         if (request.Rating != null && request.Rating.Any())
             query = query.Where(i => request.Rating.Contains(i.Image.AgeRating));
 
+        // Apply ownership filter if requested (authenticated users only).
+        if (request.OwnedOnly == true && user != null)
+            query = query.Where(uoi => uoi.UserId == user.Id);
+
         var totalCount = await query.CountAsync();
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 

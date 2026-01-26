@@ -52,7 +52,8 @@ public class ImageController(
     public record GetSearchImagesRequest(
         ICollection<string>? Tags,
         ICollection<string>? Characters,
-        ICollection<AgeRating>? Rating);
+        ICollection<AgeRating>? Rating,
+        bool? OwnedOnly);
 
     /// <summary>Response returned for a paginated list of search results.</summary>
     public record GetSearchImagesResponse(Guid Id, AgeRating Rating, DateTime StoredAt);
