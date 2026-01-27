@@ -3,8 +3,8 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-ImageManager/images
-ImageManager/import
+ImageManager/Images
+ImageManager/Import
 # User-specific files
 *.suo
 *.user

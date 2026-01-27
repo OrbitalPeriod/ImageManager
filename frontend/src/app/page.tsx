@@ -40,6 +40,7 @@ function HomeContent() {
   // Filter state
   const [selectedRatings, setSelectedRatings] = useState<AgeRating[]>([0]); // Default to General (0) rating
   const [ownedOnly, setOwnedOnly] = useState(false);
+  const [selectedFolders, setSelectedFolders] = useState<string[]>([]);
 
   // Authentication state
   const isAuthenticated = useIsAuthenticated();
@@ -115,6 +116,14 @@ function HomeContent() {
       setOwnedOnly(true);
     }
 
+    const foldersParam = searchParams.get('folders');
+    if (foldersParam) {
+      const folders = foldersParam.split(',').filter((f) => f.trim().length > 0);
+      if (folders.length > 0) {
+        setSelectedFolders(folders);
+      }
+    }
+
     isInitialized.current = true;
   }, [searchParams]);
 
@@ -142,6 +151,9 @@ function HomeContent() {
     if (ownedOnly && isAuthenticated) {
       params.set('ownedOnly', 'true');
     }
+    if (selectedFolders.length > 0) {
+      params.set('folders', selectedFolders.join(','));
+    }
 
     const newUrl = params.toString() ? `?${params.toString()}` : '/';
     const currentUrl = searchParams.toString() ? `?${searchParams.toString()}` : '/';
@@ -149,7 +161,7 @@ function HomeContent() {
     if (newUrl !== currentUrl) {
       router.replace(newUrl, { scroll: false });
     }
-  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize, ownedOnly, isAuthenticated, router, searchParams]);
+  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize, ownedOnly, selectedFolders, isAuthenticated, router, searchParams]);
 
   // Fetch images from API
   const fetchImages = useCallback(async (isLoadMore = false) => {
@@ -179,6 +191,7 @@ function HomeContent() {
         Tags?: string[];
         Rating?: AgeRating[];
         OwnedOnly?: boolean;
+        Folders?: string[];
       } = {
         page,
         pageSize,
@@ -195,6 +208,9 @@ function HomeContent() {
       }
       if (ownedOnly && isAuthenticated) {
         queryParams.OwnedOnly = true;
+      }
+      if (selectedFolders.length > 0 && isAuthenticated) {
+        queryParams.Folders = selectedFolders;
       }
 
       const response = await client.GET('/api/images/search', {
@@ -269,7 +285,7 @@ function HomeContent() {
         setLoading(false);
       }
     }
-  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize, ownedOnly, isAuthenticated, isInfiniteScroll]);
+  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, page, pageSize, ownedOnly, selectedFolders, isAuthenticated, isInfiniteScroll]);
 
   // Fetch images when dependencies change
   useEffect(() => {
@@ -290,7 +306,7 @@ function HomeContent() {
       setHasMore(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, ownedOnly, isInfiniteScroll]);
+  }, [debouncedCharacterSearch, debouncedTagSearch, selectedRatings, ownedOnly, selectedFolders, isInfiniteScroll]);
 
   // Handle infinite scroll: load more when sentinel is visible
   useEffect(() => {
@@ -359,6 +375,8 @@ function HomeContent() {
           ownedOnly={ownedOnly}
           onOwnedOnlyChange={setOwnedOnly}
           isAuthenticated={isAuthenticated}
+          selectedFolders={selectedFolders}
+          onFoldersChange={setSelectedFolders}
         />
         {loading ? (
           <div className="flex items-center justify-center py-20">

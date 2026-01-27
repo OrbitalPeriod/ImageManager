@@ -5,11 +5,13 @@
 
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils/cn';
 import { AutocompleteInput } from '@/components/ui/AutocompleteInput';
 import { getClientApiClient } from '@/lib/api/client-client';
+import { handleApiResponseError, handleError } from '@/lib/errors/handlers';
 import type { AutocompleteSuggestion } from '@/lib/hooks/useAutocomplete';
+import type { components } from '@/lib/api/client';
 
 export type AgeRating = 0 | 1 | 2 | 3; // General, Sensitive, Questionable, Explicit
 
@@ -25,6 +27,8 @@ interface SearchSectionProps {
   ownedOnly?: boolean;
   onOwnedOnlyChange?: (enabled: boolean) => void;
   isAuthenticated?: boolean;
+  selectedFolders?: string[];
+  onFoldersChange?: (folderIds: string[]) => void;
 }
 
 const UsersIcon = () => (
@@ -38,6 +42,14 @@ const TagsIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
   </svg>
 );
+
+const FolderIcon = () => (
+  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+  </svg>
+);
+
+type FolderDto = components['schemas']['FolderDto'];
 
 const AGE_RATINGS: { value: AgeRating; label: string; bgColor: string; textColor: string }[] = [
   { value: 0, label: 'General', bgColor: 'bg-safe', textColor: 'text-safe-foreground' },
@@ -58,8 +70,59 @@ export function SearchSection({
   ownedOnly = false,
   onOwnedOnlyChange,
   isAuthenticated = false,
+  selectedFolders = [],
+  onFoldersChange,
 }: SearchSectionProps) {
   const isRatingSelected = (rating: AgeRating) => selectedRatings.includes(rating);
+  const [folders, setFolders] = useState<FolderDto[]>([]);
+  const [foldersLoading, setFoldersLoading] = useState(false);
+
+  // Fetch folders for authenticated users
+  useEffect(() => {
+    if (!isAuthenticated || !onFoldersChange) {
+      setFolders([]);
+      return;
+    }
+
+    const fetchFolders = async () => {
+      setFoldersLoading(true);
+      try {
+        const client = getClientApiClient();
+        const response = await client.GET('/api/folders');
+
+        if (response.error) {
+          // Silently fail - folders are optional
+          setFolders([]);
+          return;
+        }
+
+        const data = response.data as FolderDto[] | undefined;
+        if (data) {
+          setFolders(data);
+        } else {
+          setFolders([]);
+        }
+      } catch (err) {
+        // Silently fail - folders are optional
+        setFolders([]);
+      } finally {
+        setFoldersLoading(false);
+      }
+    };
+
+    fetchFolders();
+  }, [isAuthenticated, onFoldersChange]);
+
+  const handleFolderToggle = (folderId: string) => {
+    if (!onFoldersChange || !folderId) return;
+
+    const isSelected = selectedFolders.includes(folderId);
+    if (isSelected) {
+      onFoldersChange(selectedFolders.filter((id) => id !== folderId));
+    } else {
+      onFoldersChange([...selectedFolders, folderId]);
+    }
+  };
 
   // Fetch character suggestions
   const fetchCharacterSuggestions = useCallback(async (query: string): Promise<AutocompleteSuggestion[]> => {
@@ -172,6 +235,49 @@ export function SearchSection({
             })}
           </div>
         </div>
+
+        {/* Folder Filter - Only for authenticated users */}
+        {isAuthenticated && onFoldersChange && folders.length > 0 && (
+          <div className="flex flex-col items-center gap-3">
+            <span className="text-sm text-muted-foreground font-medium">Filter by Folders:</span>
+            <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl">
+              {folders.map((folder) => {
+                const isSelected = folder.id ? selectedFolders.includes(folder.id) : false;
+                const isLiked = folder.name === 'Liked';
+                return (
+                  <button
+                    key={folder.id}
+                    onClick={() => folder.id && handleFolderToggle(folder.id)}
+                    className={cn(
+                      'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                      isSelected
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80',
+                      isLiked && isSelected && 'bg-primary/90'
+                    )}
+                  >
+                    <FolderIcon />
+                    {folder.name || 'Unnamed Folder'}
+                    {isSelected && (
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            {selectedFolders.length > 0 && (
+              <button
+                onClick={() => onFoldersChange([])}
+                className="text-xs text-muted-foreground hover:text-foreground underline"
+              >
+                Clear folder filters
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Ownership Filter - Only for authenticated users */}
         {isAuthenticated && onOwnedOnlyChange && (
