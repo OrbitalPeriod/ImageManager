@@ -11,6 +11,7 @@ using ImageManager.Services.Admin;
 using ImageManager.Services.Character;
 using ImageManager.Services.File;
 using ImageManager.Services.FolderImport;
+using ImageManager.Services.Folders;
 using ImageManager.Services.ImageImport;
 using ImageManager.Services.PlatformTokens;
 using ImageManager.Services.Query;
@@ -96,6 +97,8 @@ builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUserOwnedImageRepository, UserOwnedImageRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPlatformSyncLogRepository, PlatformSyncLogRepository>();
+builder.Services.AddScoped<IFolderRepository, FolderRepository>();
+builder.Services.AddScoped<IFolderImageRepository, FolderImageRepository>();
 
 builder.Services.AddScoped<IDeleteImageService, DeleteImageService>();
 builder.Services.AddScoped<IImageDetailService, ImageDetailService>();
@@ -110,6 +113,7 @@ builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IUserInfoService, UserInfoService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddSingleton<IFolderImportService, FolderImportService>();
+builder.Services.AddScoped<IFolderService, FolderService>();
 #endregion
 
 #region External API Clients

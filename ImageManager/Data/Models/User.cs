@@ -1,4 +1,4 @@
-﻿using ImageManager.Repositories;
+using ImageManager.Repositories;
 using Microsoft.AspNetCore.Identity;
 
 namespace ImageManager.Data.Models;
@@ -12,4 +12,5 @@ public class User : IdentityUser, IEntity<string>
     public ICollection<ShareToken> ShareTokens { get; set; } = [];
     public ICollection<DownloadedImage> DownloadedImages { get; set; } = [];
     public ICollection<PlatformToken> PlatformTokens { get; set; } = [];
+    public ICollection<Folder> Folders { get; set; } = [];
 }

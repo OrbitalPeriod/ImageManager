@@ -86,6 +86,10 @@ public class ImageQueryService(IUserOwnedImageRepository userOwnedImageRepositor
         if (request.OwnedOnly == true && user != null)
             query = query.Where(uoi => uoi.UserId == user.Id);
 
+        // Apply folder filter if provided.
+        if (request.Folders != null && request.Folders.Any())
+            query = query.Where(uoi => uoi.FolderImages.Any(fi => request.Folders.Contains(fi.FolderId)));
+
         var totalCount = await query.CountAsync();
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 

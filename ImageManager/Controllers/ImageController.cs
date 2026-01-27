@@ -53,7 +53,8 @@ public class ImageController(
         ICollection<string>? Tags,
         ICollection<string>? Characters,
         ICollection<AgeRating>? Rating,
-        bool? OwnedOnly);
+        bool? OwnedOnly,
+        ICollection<Guid>? Folders);
 
     /// <summary>Response returned for a paginated list of search results.</summary>
     public record GetSearchImagesResponse(Guid Id, AgeRating Rating, DateTime StoredAt);

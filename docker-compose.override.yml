@@ -9,8 +9,8 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - "./ImageManager/images/:/Images"
-      - "./ImageManager/import/:/Import"
+      - "./ImageManager/Images/:/Images"
+      - "./ImageManager/Import/:/Import"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     profiles: ["Backend"]

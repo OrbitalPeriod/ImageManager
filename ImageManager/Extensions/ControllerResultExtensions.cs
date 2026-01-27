@@ -2,6 +2,7 @@ using ImageManager.Controllers;
 using ImageManager.Data.Helpers;
 using ImageManager.Services.Admin;
 using ImageManager.Services.Character;
+using ImageManager.Services.Folders;
 using ImageManager.Services.ImageImport;
 using ImageManager.Services.PlatformTokens;
 using ImageManager.Services.Query;
@@ -111,6 +112,12 @@ public static class ControllerResultExtensions
             
             DeleteError.NotFound => controller.NotFound(),
             DeleteError.Forbidden => controller.Forbid(),
+            
+            FolderError.NotFound => controller.NotFound(),
+            FolderError.Forbidden => controller.Forbid(),
+            FolderError.AlreadyExists => controller.BadRequest("Resource already exists"),
+            FolderError.CannotDeleteLiked => controller.BadRequest("Cannot delete the 'Liked' folder"),
+            FolderError.InvalidPagination => controller.BadRequest("Invalid pagination parameters"),
             
             AdminError.NotFound => controller.NotFound(),
             AdminError.AlreadyApproved => controller.BadRequest("User is already approved"),

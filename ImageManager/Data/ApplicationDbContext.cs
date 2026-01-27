@@ -15,6 +15,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<PlatformToken> PlatformTokens { get; set; }
     public DbSet<UserOwnedImage> UserOwnedImages { get; set; }
     public DbSet<PlatformSyncLog> PlatformSyncLogs { get; set; }
+    public DbSet<Folder> Folders { get; set; }
+    public DbSet<FolderImage> FolderImages { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -29,6 +31,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<User>().HasMany(e => e.Images).WithOne(e => e.User);
         builder.Entity<User>().HasMany(e => e.ShareTokens).WithOne(e => e.User).HasForeignKey(st => st.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.Entity<User>().HasMany(e => e.PlatformTokens).WithOne(e => e.User);
+        builder.Entity<User>().HasMany(e => e.Folders).WithOne(e => e.User).HasForeignKey(f => f.UserId).OnDelete(DeleteBehavior.Cascade);
 
         builder.Entity<Character>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
         builder.Entity<Character>().HasKey(i => i.Id);
@@ -48,6 +51,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<UserOwnedImage>()
             .HasIndex(uoi => new { uoi.ImageId, uoi.UserId })
             .IsUnique();
+        builder.Entity<UserOwnedImage>().HasMany(e => e.FolderImages).WithOne(e => e.UserOwnedImage).HasForeignKey(fi => fi.UserOwnedImageId).OnDelete(DeleteBehavior.Cascade);
 
         builder.Entity<Image>().HasOne(i => i.DownloadedImage).WithMany(di => di.Images).IsRequired(false)
             .HasForeignKey(i => i.DownloadedImageId)
@@ -60,5 +64,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
         builder.Entity<DownloadedImage>().Property(di => di.StoredAt)
             .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        // Folder configuration
+        builder.Entity<Folder>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Entity<Folder>().HasKey(i => i.Id);
+
+        builder.Entity<FolderImage>().Property(i => i.Id).HasDefaultValueSql("gen_random_uuid()");
+        builder.Entity<FolderImage>().HasKey(i => i.Id);
+        builder.Entity<FolderImage>().HasOne(fi => fi.Folder).WithMany(f => f.FolderImages).HasForeignKey(fi => fi.FolderId).OnDelete(DeleteBehavior.Cascade);
+        // Ensure a UserOwnedImage can only be in a folder once
+        builder.Entity<FolderImage>()
+            .HasIndex(fi => new { fi.FolderId, fi.UserOwnedImageId })
+            .IsUnique();
     }
 }
