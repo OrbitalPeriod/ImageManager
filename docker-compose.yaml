@@ -1,6 +1,6 @@
 ﻿services:
   AnimeTagger:
-    image: orbitalperiod1337/imagemanager-animetagger:latest
+    image: registry.orbitalperiod.net/imagemanager/animetagger:latest
     build:
       context: ./AnimeTagger/
     env_file:
@@ -9,7 +9,7 @@
     networks: ["imagemanager_network"]
 
   imagemanager:
-    image: orbitalperiod1337/imagemanager-backend:latest
+    image: registry.orbitalperiod.net/imagemanager/imagemanager:latest
     build:
       context: ./ImageManager/ 
     ports:
@@ -46,7 +46,7 @@
 
 
   frontend:
-    image: orbitalperiod1337/imagemanager-frontend:latest
+    image: registry.orbitalperiod.net/imagemanager/frontend:latest
     build:
       context: ./frontend/
       args:
