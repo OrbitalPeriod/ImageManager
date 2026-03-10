@@ -11,6 +11,7 @@ using ImageManager.Services.Admin;
 using ImageManager.Services.Character;
 using ImageManager.Services.File;
 using ImageManager.Services.FolderImport;
+using ImageManager.Services.Folders;
 using ImageManager.Services.ImageImport;
 using ImageManager.Services.PlatformTokens;
 using ImageManager.Services.Query;
@@ -96,6 +97,8 @@ builder.Services.AddScoped<ITagRepository, TagRepository>();
 builder.Services.AddScoped<IUserOwnedImageRepository, UserOwnedImageRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPlatformSyncLogRepository, PlatformSyncLogRepository>();
+builder.Services.AddScoped<IFolderRepository, FolderRepository>();
+builder.Services.AddScoped<IFolderImageRepository, FolderImageRepository>();
 
 builder.Services.AddScoped<IDeleteImageService, DeleteImageService>();
 builder.Services.AddScoped<IImageDetailService, ImageDetailService>();
@@ -110,6 +113,7 @@ builder.Services.AddScoped<ITagService, TagService>();
 builder.Services.AddScoped<IUserInfoService, UserInfoService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddSingleton<IFolderImportService, FolderImportService>();
+builder.Services.AddScoped<IFolderService, FolderService>();
 #endregion
 
 #region External API Clients
@@ -189,6 +193,27 @@ builder.Services.AddControllers();
 #endregion
 
 var app = builder.Build();
+
+#region Database Migration
+// Apply pending migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        logger.LogInformation("Applying database migrations...");
+        db.Database.Migrate();
+        logger.LogInformation("Database migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "An error occurred while applying database migrations");
+        throw;
+    }
+}
+#endregion
 
 #region Development Environment Configuration
 if (app.Environment.IsDevelopment())

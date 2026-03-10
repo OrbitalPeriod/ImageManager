@@ -28,7 +28,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils/cn';
+import type { components } from '@/lib/api/client';
 
 // Type definitions
 interface ImageDataResponse {
@@ -88,6 +97,14 @@ const OwnerIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
   </svg>
 );
+
+const FolderIcon = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+  </svg>
+);
+
+type FolderDto = components['schemas']['FolderDto'];
 
 // Rating conversion
 const getRatingLabel = (rating: number): string => {
@@ -164,8 +181,15 @@ export default function ImageDetailPage() {
   const [imageLoading, setImageLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [folders, setFolders] = useState<FolderDto[]>([]);
+  const [foldersLoading, setFoldersLoading] = useState(false);
+  const [addToFolderDialogOpen, setAddToFolderDialogOpen] = useState(false);
+  const [addingToFolder, setAddingToFolder] = useState(false);
+  const [likedFolderId, setLikedFolderId] = useState<string | null>(null);
+  const [isLiked, setIsLiked] = useState(false);
 
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+  const { isAuthenticated } = useAuth();
 
   // Check if current user owns the image
   const isOwner = user?.id && imageData?.ownerIds?.includes(user.id);
@@ -213,6 +237,46 @@ export default function ImageDetailPage() {
   useEffect(() => {
     fetchImageData();
   }, [fetchImageData]);
+
+  // Fetch folders for authenticated users
+  const fetchFolders = useCallback(async () => {
+    if (!isAuthenticated || !user) return;
+
+    setFoldersLoading(true);
+    try {
+      const client = getClientApiClient();
+      const response = await client.GET('/api/folders');
+
+      if (response.error) {
+        // Silently fail - folders are optional
+        setFolders([]);
+        return;
+      }
+
+      const data = response.data as FolderDto[] | undefined;
+      if (data) {
+        setFolders(data);
+        // Find "Liked" folder
+        const liked = data.find((f) => f.name === 'Liked');
+        if (liked?.id) {
+          setLikedFolderId(liked.id);
+        }
+      } else {
+        setFolders([]);
+      }
+    } catch (err) {
+      // Silently fail - folders are optional
+      setFolders([]);
+    } finally {
+      setFoldersLoading(false);
+    }
+  }, [isAuthenticated, user]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchFolders();
+    }
+  }, [isAuthenticated, fetchFolders]);
 
   // Handle image quality switch
   const handleImageClick = () => {
@@ -295,6 +359,81 @@ export default function ImageDetailPage() {
       setError(`Failed to download image: ${getErrorMessage(appError)}`);
     } finally {
       setImageLoading(false);
+    }
+  };
+
+  // Add image to "Liked" folder
+  const handleLike = async () => {
+    if (!guid || !likedFolderId) {
+      setError('Liked folder not found');
+      return;
+    }
+
+    setAddingToFolder(true);
+    setError(null);
+
+    try {
+      const client = getClientApiClient();
+      const response = await client.POST('/api/folders/{folderId}/images/{imageId}', {
+        params: {
+          path: {
+            folderId: likedFolderId,
+            imageId: guid,
+          },
+        },
+      });
+
+      if (response.error) {
+        const appError = handleApiResponseError(response);
+        // If image is already in folder, that's okay
+        if (response.error.status !== 400) {
+          setError(getErrorMessage(appError));
+        } else {
+          setIsLiked(true);
+        }
+      } else {
+        setIsLiked(true);
+      }
+    } catch (err) {
+      const appError = handleError(err);
+      setError(getErrorMessage(appError));
+    } finally {
+      setAddingToFolder(false);
+    }
+  };
+
+  // Add image to selected folder
+  const handleAddToFolder = async (folderId: string) => {
+    if (!guid || !folderId) return;
+
+    setAddingToFolder(true);
+    setError(null);
+
+    try {
+      const client = getClientApiClient();
+      const response = await client.POST('/api/folders/{folderId}/images/{imageId}', {
+        params: {
+          path: {
+            folderId,
+            imageId: guid,
+          },
+        },
+      });
+
+      if (response.error) {
+        const appError = handleApiResponseError(response);
+        // If image is already in folder, that's okay
+        if (response.error.status !== 400) {
+          setError(getErrorMessage(appError));
+        }
+      } else {
+        setAddToFolderDialogOpen(false);
+      }
+    } catch (err) {
+      const appError = handleError(err);
+      setError(getErrorMessage(appError));
+    } finally {
+      setAddingToFolder(false);
     }
   };
 
@@ -521,10 +660,30 @@ export default function ImageDetailPage() {
                 )}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <Button variant="outline" size="sm" className="gap-2 border-border/50 hover:bg-primary/10 hover:text-primary hover:border-primary/50">
-                  <HeartIcon />
-                  Like
-                </Button>
+                {isAuthenticated && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 border-border/50 hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+                      onClick={handleLike}
+                      disabled={addingToFolder || !likedFolderId || foldersLoading}
+                    >
+                      <HeartIcon />
+                      {addingToFolder ? 'Adding...' : isLiked ? 'Liked' : 'Like'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 border-border/50 hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+                      onClick={() => setAddToFolderDialogOpen(true)}
+                      disabled={foldersLoading || folders.length === 0}
+                    >
+                      <FolderIcon />
+                      Add to Folder
+                    </Button>
+                  </>
+                )}
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -608,6 +767,45 @@ export default function ImageDetailPage() {
           onClose={() => setError(null)}
         />
       )}
+
+      {/* Add to Folder Dialog */}
+      <Dialog open={addToFolderDialogOpen} onOpenChange={setAddToFolderDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add to Folder</DialogTitle>
+            <DialogDescription>
+              Select a folder to add this image to.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-4 max-h-96 overflow-y-auto">
+            {folders.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No folders available. Create a folder first.</p>
+            ) : (
+              folders.map((folder) => (
+                <Button
+                  key={folder.id}
+                  variant="outline"
+                  className="w-full justify-start gap-2"
+                  onClick={() => folder.id && handleAddToFolder(folder.id)}
+                  disabled={addingToFolder}
+                >
+                  <FolderIcon />
+                  {folder.name || 'Unnamed Folder'}
+                </Button>
+              ))
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAddToFolderDialogOpen(false)}
+              disabled={addingToFolder}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

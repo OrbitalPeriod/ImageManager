@@ -66,22 +66,32 @@ function createApiError(response: ApiResponse): ApiError {
   // Check if error has a message field (ErrorResponse format)
   // openapi-fetch returns the parsed JSON body in the error field
   // For 401 with {"message":"Login failed"}, error should be { message: "Login failed" }
+  // Note: Sometimes the error might be a string (HTML) if the API returns an error page
   let message = defaultMessage;
-  if (errorDetails && typeof errorDetails === 'object' && errorDetails !== null) {
-    const errorObj = errorDetails as Record<string, unknown>;
-    
-    // Check for ErrorResponse format: { message: "..." }
-    if ('message' in errorObj && typeof errorObj.message === 'string' && errorObj.message.trim()) {
-      message = errorObj.message;
+  if (errorDetails && typeof errorDetails === 'object' && errorDetails !== null && !Array.isArray(errorDetails)) {
+    try {
+      const errorObj = errorDetails as Record<string, unknown>;
+      
+      // Check for ErrorResponse format: { message: "..." }
+      if ('message' in errorObj && typeof errorObj.message === 'string' && errorObj.message.trim()) {
+        message = errorObj.message;
+      }
+      // Check for ProblemDetails format: { detail: "..." }
+      else if ('detail' in errorObj && typeof errorObj.detail === 'string' && errorObj.detail.trim()) {
+        message = errorObj.detail;
+      }
+      // Check for ProblemDetails format: { title: "..." }
+      else if ('title' in errorObj && typeof errorObj.title === 'string' && errorObj.title.trim()) {
+        message = errorObj.title;
+      }
+    } catch {
+      // If error accessing properties, use default message
+      // This can happen if errorDetails is malformed
     }
-    // Check for ProblemDetails format: { detail: "..." }
-    else if ('detail' in errorObj && typeof errorObj.detail === 'string' && errorObj.detail.trim()) {
-      message = errorObj.detail;
-    }
-    // Check for ProblemDetails format: { title: "..." }
-    else if ('title' in errorObj && typeof errorObj.title === 'string' && errorObj.title.trim()) {
-      message = errorObj.title;
-    }
+  } else if (typeof errorDetails === 'string') {
+    // If error is a string (like HTML), try to extract useful info or use default
+    // Don't use the HTML string as the message
+    message = defaultMessage;
   }
 
   return new ApiError(status, message, errorDetails as any);

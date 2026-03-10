@@ -5,10 +5,16 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useShareToken } from '@/lib/sharertoken/hooks';
+import { useAuth } from '@/lib/auth/context';
+import { getClientApiClient } from '@/lib/api/client-client';
+import { handleApiResponseError, handleError, getErrorMessage } from '@/lib/errors/handlers';
 import { cn } from '@/lib/utils/cn';
+import type { components } from '@/lib/api/client';
+
+type FolderDto = components['schemas']['FolderDto'];
 
 export interface ImageData {
   id: string;
@@ -61,8 +67,48 @@ const getRatingBadge = (rating: number): { label: string; className: string } | 
 
 export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
   const { token } = useShareToken();
+  const { isAuthenticated } = useAuth();
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [downloadingImages, setDownloadingImages] = useState<Set<string>>(new Set());
+  const [likingImages, setLikingImages] = useState<Set<string>>(new Set());
+  const [likedFolderId, setLikedFolderId] = useState<string | null>(null);
+  const [foldersLoading, setFoldersLoading] = useState(false);
+
+  // Fetch folders to find "Liked" folder
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLikedFolderId(null);
+      return;
+    }
+
+    const fetchFolders = async () => {
+      setFoldersLoading(true);
+      try {
+        const client = getClientApiClient();
+        const response = await client.GET('/api/folders');
+
+        if (response.error || !response.data) {
+          setLikedFolderId(null);
+          return;
+        }
+
+        const folders = response.data as FolderDto[] | undefined;
+        if (folders) {
+          const liked = folders.find((f) => f.name === 'Liked');
+          if (liked?.id) {
+            setLikedFolderId(liked.id);
+          }
+        }
+      } catch (err) {
+        // Silently fail - folders are optional
+        setLikedFolderId(null);
+      } finally {
+        setFoldersLoading(false);
+      }
+    };
+
+    fetchFolders();
+  }, [isAuthenticated]);
 
   // Deduplicate images by ID to prevent duplicate key errors
   const uniqueImages = React.useMemo(() => {
@@ -78,6 +124,45 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
 
   const handleImageError = (imageId: string) => {
     setImageErrors((prev) => new Set(prev).add(imageId));
+  };
+
+  // Add image to "Liked" folder
+  const handleLike = async (e: React.MouseEvent, imageId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!imageId || !likedFolderId || !isAuthenticated) {
+      return;
+    }
+
+    try {
+      setLikingImages((prev) => new Set(prev).add(imageId));
+      const client = getClientApiClient();
+      const response = await client.POST('/api/folders/{folderId}/images/{imageId}', {
+        params: {
+          path: {
+            folderId: likedFolderId,
+            imageId: imageId,
+          },
+        },
+      });
+
+      if (response.error) {
+        // If image is already in folder (400), that's okay - silently ignore
+        // Otherwise log the error
+        if (response.error.status !== 400) {
+          console.error('Failed to add image to liked folder:', response.error);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to add image to liked folder:', err);
+    } finally {
+      setLikingImages((prev) => {
+        const next = new Set(prev);
+        next.delete(imageId);
+        return next;
+      });
+    }
   };
 
   // Download original image
@@ -186,12 +271,16 @@ export function ImageGallery({ images, apiBaseUrl = '' }: ImageGalleryProps) {
                   <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     {/* Quick Actions */}
                     <div className="absolute top-3 right-3 flex gap-2">
-                      <button 
-                        className="p-2 rounded-full glass hover:bg-primary/20 transition-colors"
-                        onClick={(e) => e.preventDefault()}
-                      >
-                        <HeartIcon />
-                      </button>
+                      {isAuthenticated && likedFolderId && (
+                        <button 
+                          className="p-2 rounded-full glass hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          onClick={(e) => handleLike(e, image.id)}
+                          disabled={likingImages.has(image.id) || foldersLoading}
+                          title={likingImages.has(image.id) ? 'Adding to liked...' : 'Add to Liked folder'}
+                        >
+                          <HeartIcon />
+                        </button>
+                      )}
                       <button 
                         className="p-2 rounded-full glass hover:bg-primary/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={(e) => handleDownload(e, image.id)}

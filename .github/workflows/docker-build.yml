@@ -13,8 +13,7 @@ on:
       - master
 
 env:
-  DOCKER_HUB_USERNAME: orbitalperiod1337  # TODO: Replace with your Docker Hub username
-  REGISTRY: docker.io
+  REGISTRY: registry.orbitalperiod.net
 
 jobs:
   build-and-push:
@@ -22,13 +21,13 @@ jobs:
     strategy:
       matrix:
         service:
-          - name: imagemanager-animetagger
+          - name: animetagger
             context: ./AnimeTagger
             dockerfile: ./AnimeTagger/Dockerfile
-          - name: imagemanager-backend
+          - name: imagemanager
             context: ./ImageManager
             dockerfile: ./ImageManager/Dockerfile
-          - name: imagemanager-frontend
+          - name: frontend
             context: ./frontend
             dockerfile: ./frontend/Dockerfile
     
@@ -39,18 +38,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
+      - name: Log in to Harbor Registry
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
-          username: ${{ env.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.HARBOR_USERNAME }}
+          password: ${{ secrets.HARBOR_PASSWORD }}
 
       - name: Extract metadata (tags, labels) for ${{ matrix.service.name }}
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.DOCKER_HUB_USERNAME }}/${{ matrix.service.name }}
+          images: ${{ env.REGISTRY }}/imagemanager/${{ matrix.service.name }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -60,7 +60,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push ${{ matrix.service.name }}
-        if: matrix.service.name != 'imagemanager-frontend'
+        if: matrix.service.name != 'frontend'
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.service.context }}
@@ -72,7 +72,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push ${{ matrix.service.name }}
-        if: matrix.service.name == 'imagemanager-frontend'
+        if: matrix.service.name == 'frontend'
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.service.context }}

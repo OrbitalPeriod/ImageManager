@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using ImageManager.Data.Models;
 using ImageManager.Services.FolderImport;
+using ImageManager.Services.Folders;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +18,7 @@ namespace ImageManager.Controllers;
 public class AuthController(UserManager<User> userManager,
                            SignInManager<User> signInManager,
                            IFolderImportService folderImportService,
+                           IFolderService folderService,
                            ILogger<AuthController> logger) : ControllerBase
 {
     #region DTOs
@@ -84,6 +86,17 @@ public class AuthController(UserManager<User> userManager,
             {
                 // Log but don't fail user creation if folder creation fails
                 logger.LogWarning(ex, "Failed to create import folder for user {UserId} during registration", user.Id);
+            }
+
+            // Create "Liked" folder for the new user
+            try
+            {
+                await folderService.EnsureLikedFolderExistsAsync(user.Id);
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail user creation if folder creation fails
+                logger.LogWarning(ex, "Failed to create Liked folder for user {UserId} during registration", user.Id);
             }
             
             return Ok(new RegisterResponse("Registration successful. Your account is pending administrator approval."));

@@ -24,28 +24,37 @@ export class ApiError extends Error {
   constructor(
     status: number,
     message: string,
-    details?: ProblemDetails | ErrorsResponse | ErrorResponse
+    details?: ProblemDetails | ErrorsResponse | ErrorResponse | unknown
   ) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
 
-    if ('detail' in (details || {})) {
-      const problemDetails = details as ProblemDetails;
-      this.detail = problemDetails.detail || undefined;
-      this.title = problemDetails.title || undefined;
-      this.type = problemDetails.type || undefined;
-      this.instance = problemDetails.instance || undefined;
-    }
+    // Only process details if it's an object (not a string/HTML)
+    if (details && typeof details === 'object' && details !== null && !Array.isArray(details)) {
+      try {
+        const detailsObj = details as Record<string, unknown>;
+        
+        if ('detail' in detailsObj) {
+          const problemDetails = details as ProblemDetails;
+          this.detail = problemDetails.detail || undefined;
+          this.title = problemDetails.title || undefined;
+          this.type = problemDetails.type || undefined;
+          this.instance = problemDetails.instance || undefined;
+        }
 
-    if ('errors' in (details || {})) {
-      const errorsResponse = details as ErrorsResponse;
-      this.errors = errorsResponse.errors || undefined;
-    }
+        if ('errors' in detailsObj) {
+          const errorsResponse = details as ErrorsResponse;
+          this.errors = errorsResponse.errors || undefined;
+        }
 
-    if ('message' in (details || {})) {
-      const errorResponse = details as ErrorResponse;
-      this.message = errorResponse.message || message;
+        if ('message' in detailsObj) {
+          const errorResponse = details as ErrorResponse;
+          this.message = errorResponse.message || message;
+        }
+      } catch {
+        // If accessing properties fails (e.g., details is malformed), ignore
+      }
     }
   }
 
